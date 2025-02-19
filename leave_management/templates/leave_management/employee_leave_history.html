@@ -1,0 +1,61 @@
+{% extends 'leave_management/base.html' %}
+
+{% block content %}
+<div class="card shadow mb-4">
+    <div class="card-header">
+        <h4 class="mb-0">Employee Leave History</h4>
+    </div>
+    <div class="card-body">
+        <form method="get" class="mb-4">
+            <div class="row align-items-end">
+                <div class="col-md-4">
+                    <label for="employee_id" class="form-label">Employee ID</label>
+                    <input type="text" name="employee_id" id="employee_id" class="form-control" value="{{ request.GET.employee_id }}" required>
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-primary">Search</button>
+                </div>
+            </div>
+        </form>
+
+        {% if employee %}
+            <div class="alert alert-info">
+                <h5 class="mb-0">Employee Details</h5>
+                <p class="mb-0">
+                    Name: {{ employee.get_full_name }}<br>
+                    Department: {{ employee.get_department_display }}<br>
+                    Casual Leaves Remaining: {{ employee.casual_leaves_remaining }}<br>
+                    Extra Leaves Taken: {{ employee.extra_leaves_taken }}
+                </p>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Month/Year</th>
+                            <th>Casual Leaves</th>
+                            <th>Extra Leaves</th>
+                            <th>Summer Leaves</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for record in history %}
+                        <tr>
+                            <td>{{ record.month }}/{{ record.year }}</td>
+                            <td>{{ record.casual_leaves_taken }}</td>
+                            <td>{{ record.extra_leaves_taken }}</td>
+                            <td>{{ record.summer_leaves_taken }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="4" class="text-center">No leave history found.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

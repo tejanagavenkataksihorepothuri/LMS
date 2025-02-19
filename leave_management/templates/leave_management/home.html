@@ -1,0 +1,101 @@
+{% extends 'leave_management/base.html' %}
+
+{% block content %}
+<div class="welcome-section">
+    <h1 class="welcome-text">Welcome, {{ user.first_name }}!</h1>
+    <div class="row mt-5">
+        <div class="col-md-4 animate-card">
+            <div class="card h-100">
+                <div class="card-body text-center">
+                    <i class="fas fa-calendar-plus fa-3x mb-3 text-primary"></i>
+                    <h3 class="card-title">Apply Leave</h3>
+                    <p class="card-text">Submit a new leave request</p>
+                    <a href="{% url 'apply_leave' %}" class="btn btn-primary mt-3">Apply Now</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 animate-card" style="animation-delay: 0.2s">
+            <div class="card h-100">
+                <div class="card-body text-center">
+                    <i class="fas fa-history fa-3x mb-3 text-primary"></i>
+                    <h3 class="card-title">Leave History</h3>
+                    <p class="card-text">View your leave history</p>
+                    <a href="{% url 'leave_history' %}" class="btn btn-primary mt-3">View History</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 animate-card" style="animation-delay: 0.4s">
+            <div class="card h-100">
+                <div class="card-body text-center">
+                    <i class="fas fa-key fa-3x mb-3 text-primary"></i>
+                    <h3 class="card-title">Change Password</h3>
+                    <p class="card-text">Update your password</p>
+                    <a href="{% url 'change_password' %}" class="btn btn-primary mt-3">Change Now</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .welcome-section {
+        text-align: center;
+        padding: 2rem 0;
+    }
+
+    .animate-card {
+        opacity: 0;
+        animation: slideUp 0.8s ease forwards;
+    }
+
+    @keyframes slideUp {
+        from {
+            opacity: 0;
+            transform: translateY(50px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .card {
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+        border: none;
+        border-radius: 15px;
+        overflow: hidden;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+    }
+
+    .card:hover {
+        transform: translateY(-10px);
+        box-shadow: 0 15px 30px rgba(0, 0, 0, 0.2);
+    }
+
+    .card-body {
+        padding: 2rem;
+    }
+
+    .fa-3x {
+        transition: transform 0.3s ease;
+    }
+
+    .card:hover .fa-3x {
+        transform: scale(1.2);
+    }
+
+    .btn-primary {
+        border-radius: 25px;
+        padding: 10px 25px;
+        text-transform: uppercase;
+        font-weight: 500;
+        letter-spacing: 1px;
+        transition: all 0.3s ease;
+    }
+
+    .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(78, 84, 200, 0.4);
+    }
+</style>
+{% endblock %}

@@ -1,0 +1,87 @@
+{% extends 'leave_management/base.html' %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12">
+        <div class="card shadow mb-4">
+            <div class="card-header">
+                <h4 class="mb-0">Leave Requests</h4>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Start Date</th>
+                                <th>End Date</th>
+                                <th>Days</th>
+                                <th>Reason</th>
+                                <th>Status</th>
+                                <th>Applied On</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for leave in leaves %}
+                            <tr>
+                                <td>{{ leave.start_date }}</td>
+                                <td>{{ leave.end_date }}</td>
+                                <td>{{ leave.number_of_days }}</td>
+                                <td>{{ leave.reason }}</td>
+                                <td>
+                                    <span class="badge {% if leave.status == 'APPROVED' %}bg-success{% elif leave.status == 'REJECTED' %}bg-danger{% else %}bg-warning{% endif %}">
+                                        {{ leave.status }}
+                                    </span>
+                                </td>
+                                <td>{{ leave.created_at|date:"M d, Y" }}</td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="6" class="text-center">No leave requests found.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-12">
+        <div class="card shadow">
+            <div class="card-header">
+                <h4 class="mb-0">Monthly Leave Summary</h4>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Month/Year</th>
+                                <th>Casual Leaves</th>
+                                <th>Extra Leaves</th>
+                                <th>Summer Leaves</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for history in monthly_history %}
+                            <tr>
+                                <td>{{ history.month }}/{{ history.year }}</td>
+                                <td>{{ history.casual_leaves_taken }}</td>
+                                <td>{{ history.extra_leaves_taken }}</td>
+                                <td>{{ history.summer_leaves_taken }}</td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="4" class="text-center">No leave history found.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

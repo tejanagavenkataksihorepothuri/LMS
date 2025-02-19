@@ -1,0 +1,34 @@
+{% extends 'leave_management/base.html' %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card shadow">
+            <div class="card-header">
+                <h4 class="mb-0">Delete Employee</h4>
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label for="employee_id" class="form-label">Employee ID</label>
+                        <input type="text" name="employee_id" id="employee_id" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="password" class="form-label">Admin Password</label>
+                        <input type="password" name="password" id="password" class="form-control" required>
+                        <div class="form-text text-muted">
+                            Please enter your admin password to confirm deletion.
+                        </div>
+                    </div>
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-danger" onclick="return confirm('Are you sure you want to delete this employee? This action cannot be undone.')">
+                            Delete Employee
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

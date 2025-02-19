@@ -1,0 +1,54 @@
+{% extends 'leave_management/base.html' %}
+
+{% block content %}
+<div class="card shadow">
+    <div class="card-header">
+        <h4 class="mb-0">Pending Leave Applications</h4>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Employee ID</th>
+                        <th>Name</th>
+                        <th>Department</th>
+                        <th>Start Date</th>
+                        <th>End Date</th>
+                        <th>Days</th>
+                        <th>Reason</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for leave in leaves %}
+                    <tr>
+                        <td>{{ leave.employee.employee_id }}</td>
+                        <td>{{ leave.employee.get_full_name }}</td>
+                        <td>{{ leave.employee.get_department_display }}</td>
+                        <td>{{ leave.start_date }}</td>
+                        <td>{{ leave.end_date }}</td>
+                        <td>{{ leave.number_of_days }}</td>
+                        <td>{{ leave.reason }}</td>
+                        <td>
+                            <div class="btn-group" role="group">
+                                <a href="{% url 'approve_leave' leave.id %}" class="btn btn-success btn-sm">
+                                    <i class="fas fa-check"></i> Approve
+                                </a>
+                                <a href="{% url 'reject_leave' leave.id %}" class="btn btn-danger btn-sm">
+                                    <i class="fas fa-times"></i> Reject
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="8" class="text-center">No pending leave applications.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
