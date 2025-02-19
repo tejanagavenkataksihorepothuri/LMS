@@ -1,0 +1,150 @@
+{% extends 'leave_management/base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="card shadow mb-4">
+    <div class="card-header">
+        <h4 class="mb-0">Employee Leave Report</h4>
+    </div>
+    <div class="card-body">
+        <!-- Search Form -->
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <form method="get" action="{% url 'employee_leave_report' %}" class="d-flex">
+                    <input type="text" name="employee_id" class="form-control me-2" placeholder="Enter Employee ID" value="{{ search_id }}">
+                    <button type="submit" class="btn btn-primary">Search</button>
+                </form>
+            </div>
+        </div>
+
+        {% if employee %}
+        <!-- Employee Details -->
+        <div class="row mb-4">
+            <div class="col-md-4">
+                <div class="alert alert-info">
+                    <h5 class="alert-heading">Employee Information</h5>
+                    <dl class="mb-0">
+                        <dt>Employee ID</dt>
+                        <dd>{{ employee.employee_id }}</dd>
+                        <dt>Name</dt>
+                        <dd>{{ employee.get_full_name }}</dd>
+                        <dt>Department</dt>
+                        <dd>{{ employee.get_department_display }}</dd>
+                    </dl>
+                </div>
+            </div>
+            <div class="col-md-8">
+                <div class="alert alert-success">
+                    <h5 class="alert-heading">Leave Summary</h5>
+                    <div class="row">
+                        <div class="col-md-4">
+                            <dl class="mb-0">
+                                <dt>Casual Leaves Available</dt>
+                                <dd>{{ casual_leaves_remaining }}</dd>
+                            </dl>
+                        </div>
+                        <div class="col-md-4">
+                            <dl class="mb-0">
+                                <dt>Summer Leaves Available</dt>
+                                <dd>{{ summer_leaves_remaining }}</dd>
+                            </dl>
+                        </div>
+                        <div class="col-md-4">
+                            <dl class="mb-0">
+                                <dt>Extra Leaves Taken</dt>
+                                <dd>{{ total_extra_leaves }}</dd>
+                            </dl>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Monthly Report -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <h5>Monthly Leave Report ({{ current_year }})</h5>
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover">
+                        <thead style="background-color: #343a40; color: white;">
+                            <tr>
+                                <th>Month</th>
+                                <th>Casual Leaves</th>
+                                <th>Extra Leaves</th>
+                                <th>Summer Leaves</th>
+                                <th>Total Days</th>
+                            </tr>
+                        </thead>
+                        <tbody class="table-info">
+                            {% for month in monthly_report %}
+                            <tr>
+                                <td>{{ month.month_name }}</td>
+                                <td>{{ month.casual_leaves }}</td>
+                                <td>{{ month.extra_leaves }}</td>
+                                <td>{{ month.summer_leaves }}</td>
+                                <td>{{ month.total_days }}</td>
+                            </tr>
+                            {% endfor %}
+                            <tr class="table-dark text-white">
+                                <td><strong>Total</strong></td>
+                                <td><strong>{{ yearly_totals.casual_leaves }}</strong></td>
+                                <td><strong>{{ yearly_totals.extra_leaves }}</strong></td>
+                                <td><strong>{{ yearly_totals.summer_leaves }}</strong></td>
+                                <td><strong>{{ yearly_totals.total_days }}</strong></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Leave History -->
+        <div class="row">
+            <div class="col-12">
+                <h5>Leave History</h5>
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover">
+                        <thead style="background-color: #343a40; color: white;">
+                            <tr>
+                                <th>Start Date</th>
+                                <th>End Date</th>
+                                <th>Days</th>
+                                <th>Leave Type</th>
+                                <th>Reason</th>
+                                <th>Status</th>
+                                <th>Applied Date</th>
+                            </tr>
+                        </thead>
+                        <tbody class="table-info">
+                            {% for leave in leave_history %}
+                            <tr>
+                                <td>{{ leave.start_date }}</td>
+                                <td>{{ leave.end_date }}</td>
+                                <td>{{ leave.number_of_days }}</td>
+                                <td>{{ leave.type }}</td>
+                                <td>{{ leave.reason }}</td>
+                                <td>
+                                    <span class="badge {% if leave.status == 'APPROVED' %}bg-success{% elif leave.status == 'REJECTED' %}bg-danger{% else %}bg-warning{% endif %}">
+                                        {{ leave.status }}
+                                    </span>
+                                </td>
+                                <td>{{ leave.applied_date }}</td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="7" class="text-center">No leave history found</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        {% elif search_id %}
+        <div class="alert alert-warning">
+            No employee found with ID: {{ search_id }}
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

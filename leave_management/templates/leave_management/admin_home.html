@@ -1,7 +1,7 @@
 {% extends 'leave_management/base.html' %}
 
 {% block content %}
-<div class="welcome-text mb-5">Welcome Admin {{ user.get_full_name|default:user.username }} to Leave Management System</div>
+<div class="welcome-text mb-5">Welcome {{ user.get_full_name|default:user.username }} to Leave Management System</div>
 
 <div class="row justify-content-center">
     <div class="col-md-4">
@@ -27,25 +27,11 @@
     <div class="col-md-4">
         <div class="card text-center">
             <div class="card-body">
-                <i class="fas fa-user-plus fa-3x mb-3 text-primary"></i>
-                <h5 class="card-title">Register Employee</h5>
-                <p class="card-text">Add new employee</p>
-                <a href="{% url 'register_employee' %}" class="btn btn-primary">Register</a>
+                <i class="fas fa-history fa-3x mb-3 text-primary"></i>
+                <h5 class="card-title">Notifications</h5>
+                <p class="card-text">View notifications</p>
+                <a href="{% url 'notifications' %}" class="btn btn-primary">View History</a>
             </div>
         </div>
     </div>
-</div>
-
-<div class="row justify-content-center mt-4">
-    <div class="col-md-4">
-        <div class="card text-center">
-            <div class="card-body">
-                <i class="fas fa-user-minus fa-3x mb-3 text-primary"></i>
-                <h5 class="card-title">Delete Employee</h5>
-                <p class="card-text">Remove employee records</p>
-                <a href="{% url 'delete_employee' %}" class="btn btn-primary">Delete</a>
-            </div>
-        </div>
-    </div>
-</div>
 {% endblock %}

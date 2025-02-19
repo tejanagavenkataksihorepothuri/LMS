@@ -1,91 +1,51 @@
 {% extends 'leave_management/base.html' %}
+{% load static %}
 {% load crispy_forms_tags %}
 
 {% block content %}
-<div class="row justify-content-center">
-    <div class="col-md-6">
-        <div class="card shadow">
-            <div class="card-header text-center">
-                <h2 class="mb-0">Welcome Back!</h2>
-            </div>
-            <div class="card-body p-4">
-                <div class="text-center mb-4">
-                    <i class="fas fa-user-circle fa-4x text-primary mb-3"></i>
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h3 class="mb-0">Login</h3>
                 </div>
-                <form method="post" class="login-form">
-                    {% csrf_token %}
-                    <div class="mb-4">
-                        <label for="username" class="form-label">
-                            <i class="fas fa-id-card me-2"></i>Employee ID
-                        </label>
-                        <input type="text" name="username" class="form-control" required id="username" placeholder="Enter your Employee ID">
+                <div class="card-body">
+                    {% if messages %}
+                    <div class="messages">
+                        {% for message in messages %}
+                        <div class="alert alert-{{ message.tags }}">
+                            {{ message }}
+                        </div>
+                        {% endfor %}
                     </div>
-                    <div class="mb-4">
-                        <label for="password" class="form-label">
-                            <i class="fas fa-lock me-2"></i>Password
-                        </label>
-                        <input type="password" name="password" class="form-control" required id="password" placeholder="Enter your password">
-                    </div>
-                    <div class="d-grid">
-                        <button type="submit" class="btn btn-primary btn-lg">
-                            <i class="fas fa-sign-in-alt me-2"></i>Login
-                        </button>
-                    </div>
-                </form>
+                    {% endif %}
+                    
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label for="employee_id" class="form-label">Employee ID</label>
+                            <input type="text" class="form-control" id="employee_id" name="employee_id" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="password" class="form-label">Password</label>
+                            <input type="password" class="form-control" id="password" name="password" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="login_type" class="form-label">Login Type</label>
+                            <select class="form-select" id="login_type" name="login_type" required>
+                                <option value="">Select Login Type</option>
+                                <option value="admin">Admin</option>
+                                <option value="employee">Employee</option>
+                            </select>
+                        </div>
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary">Login</button>
+                        </div>
+                    </form>
+                </div>
             </div>
         </div>
     </div>
 </div>
-
-<style>
-    .login-form {
-        max-width: 400px;
-        margin: 0 auto;
-    }
-    
-    .card {
-        border: none;
-        border-radius: 15px;
-        overflow: hidden;
-        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
-    }
-    
-    .card-header {
-        background: linear-gradient(45deg, var(--primary-color), var(--secondary-color));
-        color: white;
-        padding: 1.5rem;
-    }
-    
-    .card-body {
-        background: white;
-    }
-    
-    .text-primary {
-        background: linear-gradient(45deg, var(--primary-color), var(--secondary-color));
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-    }
-    
-    .form-control {
-        border-radius: 10px;
-        padding: 12px;
-        border: 2px solid #e0e0e0;
-        transition: all 0.3s ease;
-    }
-    
-    .form-control:focus {
-        border-color: var(--primary-color);
-        box-shadow: 0 0 0 0.2rem rgba(78, 84, 200, 0.25);
-    }
-    
-    .btn-primary {
-        padding: 12px;
-        font-weight: 500;
-    }
-    
-    .form-label {
-        font-weight: 500;
-        color: var(--dark-color);
-    }
-</style>
 {% endblock %}

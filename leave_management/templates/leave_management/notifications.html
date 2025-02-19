@@ -1,0 +1,89 @@
+{% extends 'leave_management/base.html' %}
+
+{% block content %}
+<div class="card shadow mb-4">
+    <div class="card-header">
+        <h4 class="mb-0">Failed Login Attempts</h4>
+    </div>
+    <div class="card-body">
+        <div id="loginAttemptsGrid" style="height: 500px;" class="ag-theme-alpine"></div>
+    </div>
+</div>
+
+<script src="https://unpkg.com/ag-grid-community/dist/ag-grid-community.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const gridOptions = {
+        columnDefs: [
+            { field: 'username', headerName: 'Username', sortable: true, filter: true },
+            { field: 'attempted_at', headerName: 'Attempted At', sortable: true, filter: true },
+            { field: 'ip_address', headerName: 'IP Address', sortable: true, filter: true },
+            { field: 'role', headerName: 'Role', sortable: true, filter: true },
+            {
+                headerName: 'Actions',
+                cellRenderer: params => {
+                    return `<button onclick="deleteAttempt(${params.data.id})" class="btn btn-danger btn-sm">
+                        <i class="fas fa-trash"></i>
+                    </button>`;
+                }
+            }
+        ],
+        defaultColDef: {
+            flex: 1,
+            minWidth: 100,
+            resizable: true,
+        },
+        rowData: [],
+        pagination: true,
+        paginationPageSize: 10,
+        domLayout: 'autoHeight'
+    };
+
+    const gridDiv = document.querySelector('#loginAttemptsGrid');
+    new agGrid.Grid(gridDiv, gridOptions);
+
+    fetch('/leave_management/get_login_attempts/')
+        .then(response => response.json())
+        .then(data => {
+            gridOptions.api.setRowData(data.data);
+        });
+
+    window.deleteAttempt = function(id) {
+        if (confirm('Are you sure you want to delete this record?')) {
+            fetch(`/leave_management/delete_login_attempt/${id}/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    gridOptions.api.applyTransaction({
+                        remove: [gridOptions.api.getRowNode(id)]
+                    });
+                }
+            });
+        }
+    };
+});
+</script>
+
+<style>
+.ag-theme-alpine {
+    --ag-header-height: 40px;
+    --ag-header-foreground-color: #2c3e50;
+    --ag-header-background-color: #f8f9fa;
+    --ag-header-cell-hover-background-color: #e9ecef;
+    --ag-header-cell-moving-background-color: #f8f9fa;
+}
+
+.ag-theme-alpine .ag-header-cell {
+    font-weight: bold;
+}
+
+.ag-theme-alpine .ag-cell {
+    padding: 8px 15px;
+}
+</style>
+{% endblock %}

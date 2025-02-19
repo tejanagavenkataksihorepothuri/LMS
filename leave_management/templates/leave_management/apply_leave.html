@@ -5,17 +5,79 @@
 <div class="row justify-content-center">
     <div class="col-md-8">
         <div class="card shadow">
+            <div class="card-header">
+                <h4 class="mb-0">Apply for Leave</h4>
+            </div>
             <div class="card-body">
-                <h2 class="text-center mb-4">Apply for Leave</h2>
+                {% if messages %}
+                    {% for message in messages %}
+                        <div class="alert alert-{% if message.tags %}{{ message.tags }}{% endif %} alert-dismissible fade show" role="alert">
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+
                 <form method="post">
                     {% csrf_token %}
-                    {{ form|crispy }}
+                    <div class="mb-3">
+                        <label for="id_start_date" class="form-label">Start Date</label>
+                        <input type="date" name="start_date" class="form-control" required id="id_start_date" min="{{ today|date:'Y-m-d' }}">
+                    </div>
+                    <div class="mb-3">
+                        <label for="id_end_date" class="form-label">End Date</label>
+                        <input type="date" name="end_date" class="form-control" required id="id_end_date" min="{{ today|date:'Y-m-d' }}">
+                    </div>
+                    <div class="mb-3">
+                        <label for="id_reason" class="form-label">Reason</label>
+                        <textarea name="reason" class="form-control" required id="id_reason" rows="3"></textarea>
+                    </div>
                     <div class="d-grid">
-                        <button type="submit" class="btn btn-primary">Submit Request</button>
+                        <button type="submit" class="btn btn-primary">Submit Leave Request</button>
                     </div>
                 </form>
             </div>
         </div>
     </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const disabledDates = JSON.parse('{{ disabled_dates|safe }}');
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    const startDateInput = document.getElementById('id_start_date');
+    const endDateInput = document.getElementById('id_end_date');
+    
+    function isDateDisabled(date) {
+        const dateStr = date.toISOString().split('T')[0];
+        return disabledDates.includes(dateStr) || date <= today;
+    }
+    
+    startDateInput.addEventListener('change', function() {
+        const startDate = new Date(this.value);
+        endDateInput.min = this.value;
+        
+        if (isDateDisabled(startDate)) {
+            this.value = '';
+            alert('This date is not available for leave application');
+        }
+    });
+    
+    endDateInput.addEventListener('change', function() {
+        const endDate = new Date(this.value);
+        const startDate = new Date(startDateInput.value);
+        
+        if (endDate < startDate) {
+            this.value = startDateInput.value;
+        }
+        
+        if (isDateDisabled(endDate)) {
+            this.value = '';
+            alert('This date is not available for leave application');
+        }
+    });
+});
+</script>
 {% endblock %}

@@ -270,13 +270,34 @@
                                 </a>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link" href="{% url 'register_employee' %}">
-                                    <i class="fas fa-user-plus"></i> Register
+                            <li class="nav-item dropdown">
+                                <a class="nav-link dropdown-toggle" href="#" id="navbarDropdownMenuLink" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                    <i class="fas fa-user"></i> Employee
+                                </a>
+                                <ul class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
+                                    <li>
+                                        <a class="dropdown-item" href="{% url 'register_employee' %}">
+                                            <i class="fas fa-user-plus"></i> Register
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a class="dropdown-item" href="{% url 'delete_employee' %}">
+                                            <i class="fas fa-user-minus"></i> Delete
+                                        </a>
+                                    </li>
+                                </ul>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="{% url 'admin_notifications' %}">
+                                    <i class="fas fa-bell"></i> Notifications
+                                    {% if failed_attempts_count > 0 %}
+                                    <span class="badge bg-danger">{{ failed_attempts_count }}</span>
+                                    {% endif %}
                                 </a>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link" href="{% url 'delete_employee' %}">
-                                    <i class="fas fa-user-minus"></i> Delete
+                                <a class="nav-link" href="{% url 'notifications' %}">
+                                    <i class="fas fa-bell me-2"></i>Notifications
                                 </a>
                             </li>
                         </ul>
