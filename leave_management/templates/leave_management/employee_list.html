@@ -1,0 +1,27 @@
+{% extends 'leave_management/base.html' %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2 class="mb-4">Employee List</h2>
+    <table class="table table-bordered">
+        <thead>
+            <tr>
+                <th>Employee ID</th>
+                <th>Name</th>
+                <th>Department</th>
+                <th>Email</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for employee in employees %}
+            <tr>
+                <td>{{ employee.employee_id }}</td>
+                <td>{{ employee.first_name }} {{ employee.last_name }}</td>
+                <td>{{ employee.department }}</td>
+                <td>{{ employee.email }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

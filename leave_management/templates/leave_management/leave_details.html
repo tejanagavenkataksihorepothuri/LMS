@@ -1,0 +1,39 @@
+{% extends 'leave_management/base.html' %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2 class="mb-4">Leave Details for {{ selected_date }}</h2>
+    <form method="get" class="mb-4">
+        <div class="input-group">
+            <input type="date" name="date" class="form-control" required>
+            <button type="submit" class="btn btn-primary">Check</button>
+        </div>
+    </form>
+    {% if leaves %}
+    <table class="table table-bordered">
+        <thead>
+            <tr>
+                <th>Employee ID</th>
+                <th>Name</th>
+                <th>Department</th>
+                <th>Leave Dates</th>
+                <th>Reason</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for leave in leaves %}
+            <tr>
+                <td>{{ leave.employee.employee_id }}</td>
+                <td>{{ leave.employee.first_name }} {{ leave.employee.last_name }}</td>
+                <td>{{ leave.employee.department }}</td>
+                <td>{{ leave.start_date }} to {{ leave.end_date }}</td>
+                <td>{{ leave.reason }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p>No leave records found for this date.</p>
+    {% endif %}
+</div>
+{% endblock %}

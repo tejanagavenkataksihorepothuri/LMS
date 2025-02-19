@@ -5,7 +5,7 @@ from django.contrib.auth import views as auth_views
 urlpatterns = [
     # Authentication URLs
     path('login/', views.CustomLoginView.as_view(), name='login'),
-    path('logout/', auth_views.LogoutView.as_view(), name='logout'),
+    path('logout/', views.custom_logout, name='logout'),
     path('change-password/', views.ChangePasswordView.as_view(), name='change_password'),
     
     # Notifications URLs
@@ -17,6 +17,7 @@ urlpatterns = [
     path('', views.home, name='home'),
     path('apply-leave/', views.apply_leave, name='apply_leave'),
     path('leave-history/', views.leave_history, name='leave_history'),
+    path('employee-list/', views.employee_list, name='employee_list'),
     
     # Admin URLs
     path('admin-home/', views.admin_home, name='admin_home'),
@@ -28,6 +29,7 @@ urlpatterns = [
     path('bulk-register/', views.bulk_register, name='bulk_register'),
     path('download-csv-template/', views.download_csv_template, name='download_csv_template'),
     path('delete-employee/', views.delete_employee, name='delete_employee'),
+    path('leave-details/', views.leave_details_by_date, name='leave_details_by_date'),
     
     # API endpoints
     path('approve-leave/<int:leave_id>/', views.approve_leave, name='approve_leave'),
