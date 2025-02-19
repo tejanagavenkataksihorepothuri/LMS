@@ -2,58 +2,56 @@
 {% load crispy_forms_tags %}
 
 {% block content %}
-<div class="container mt-5">
-    <div class="row justify-content-center">
-        <div class="col-md-8 col-lg-6">
-            <div class="card shadow-lg border-0">
-                <div class="card-header bg-primary text-white text-center">
-                    <h3 class="mb-0">Login to Your Account</h3>
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card shadow">
+            <div class="card-header text-center">
+                <h2 class="mb-0">Welcome Back!</h2>
+            </div>
+            <div class="card-body p-4">
+                <div class="text-center mb-4">
+                    <i class="fas fa-user-circle fa-4x text-primary mb-3"></i>
                 </div>
-                <div class="card-body p-5">
-                    <div class="text-center mb-4">
-                        <i class="fas fa-lock fa-4x text-primary mb-3"></i>
+                <form method="post" class="login-form">
+                    {% csrf_token %}
+                    {% if messages %}
+                    <div class="mb-4">
+                        {% for message in messages %}
+                            <div class="alert alert-{% if message.tags %}{{ message.tags }}{% endif %} alert-dismissible fade show" role="alert">
+                                {{ message }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                            </div>
+                        {% endfor %}
                     </div>
-                    <form method="post" class="login-form">
-                        {% csrf_token %}
-                        {% if messages %}
-                        <div class="mb-4">
-                            {% for message in messages %}
-                                <div class="alert alert-{% if message.tags %}{{ message.tags }}{% endif %} alert-dismissible fade show" role="alert">
-                                    {{ message }}
-                                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                                </div>
-                            {% endfor %}
-                        </div>
-                        {% endif %}
-                        <div class="mb-4">
-                            <label for="role" class="form-label">
-                                <i class="fas fa-user-tag me-2"></i>Login As
-                            </label>
-                            <select name="role" class="form-control form-control-lg" required id="role">
-                                <option value="">Select Role</option>
-                                <option value="employee">Employee</option>
-                                <option value="employer">Employer</option>
-                            </select>
-                        </div>
-                        <div class="mb-4">
-                            <label for="username" class="form-label">
-                                <i class="fas fa-id-card me-2"></i>Employee ID
-                            </label>
-                            <input type="text" name="username" class="form-control form-control-lg" required id="username" placeholder="Enter your Employee ID" style="text-transform: uppercase;">
-                        </div>
-                        <div class="mb-4">
-                            <label for="password" class="form-label">
-                                <i class="fas fa-lock me-2"></i>Password
-                            </label>
-                            <input type="password" name="password" class="form-control form-control-lg" required id="password" placeholder="Enter your password">
-                        </div>
-                        <div class="d-grid">
-                            <button type="submit" class="btn btn-primary btn-lg">
-                                <i class="fas fa-sign-in-alt me-2"></i>Login
-                            </button>
-                        </div>
-                    </form>
-                </div>
+                    {% endif %}
+                    <div class="mb-4">
+                        <label for="role" class="form-label">
+                            <i class="fas fa-user-tag me-2"></i>Login As
+                        </label>
+                        <select name="role" class="form-control" required id="role">
+                            <option value="">Select Role</option>
+                            <option value="employee">Employee</option>
+                            <option value="employer">Employer</option>
+                        </select>
+                    </div>
+                    <div class="mb-4">
+                        <label for="username" class="form-label">
+                            <i class="fas fa-id-card me-2"></i>Employee ID
+                        </label>
+                        <input type="text" name="username" class="form-control" required id="username" placeholder="Enter your Employee ID" style="text-transform: uppercase;">
+                    </div>
+                    <div class="mb-4">
+                        <label for="password" class="form-label">
+                            <i class="fas fa-lock me-2"></i>Password
+                        </label>
+                        <input type="password" name="password" class="form-control" required id="password" placeholder="Enter your password">
+                    </div>
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary btn-lg">
+                            <i class="fas fa-sign-in-alt me-2"></i>Login
+                        </button>
+                    </div>
+                </form>
             </div>
         </div>
     </div>

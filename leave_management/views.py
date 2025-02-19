@@ -288,13 +288,6 @@ def employee_leave_detail(request, employee_id):
 
 @login_required
 @user_passes_test(is_admin)
-def employee_list(request):
-    """View to list all employees."""
-    employees = Employee.objects.all()
-    return render(request, 'leave_management/employee_list.html', {'employees': employees})
-
-@login_required
-@user_passes_test(is_admin)
 def register_employee(request):
     if request.method == 'POST':
         form = EmployeeForm(request.POST)
@@ -578,22 +571,3 @@ def download_csv_template(request):
     writer.writerow(['UR01', 'John', 'Doe', 'CSE', 'welcome123'])
     
     return response
-
-def custom_logout(request):
-    """Custom logout view to handle logout process and redirect to login page."""
-    if request.method == 'GET':
-        logout(request)
-        messages.success(request, 'You have been logged out successfully.')
-        return redirect('login')
-    else:
-        return HttpResponse(status=405)
-
-@login_required
-@user_passes_test(is_admin)
-def leave_details_by_date(request):
-    """View to fetch leave details for a specific date."""
-    date = request.GET.get('date')
-    if date:
-        leaves = LeaveRequest.objects.filter(Q(start_date__lte=date) & Q(end_date__gte=date))
-        return render(request, 'leave_management/leave_details.html', {'leaves': leaves, 'selected_date': date})
-    return render(request, 'leave_management/leave_details.html', {'leaves': [], 'selected_date': None})

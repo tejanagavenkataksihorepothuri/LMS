@@ -1,102 +1,101 @@
 {% extends 'leave_management/base.html' %}
 
 {% block content %}
-<div class="row">
-    <!-- Welcome Card -->
-    <div class="col-12 mb-4">
-        <div class="card bg-primary text-white">
-            <div class="card-body">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <h3 class="mb-0">Welcome, {{ user.get_full_name }}</h3>
-                        <p class="mb-0">{{ user.get_department_display }} Department</p>
-                    </div>
-                    <div class="text-end">
-                        <i class="fas fa-user-circle fa-3x opacity-50"></i>
-                    </div>
+<div class="welcome-section">
+    <h1 class="welcome-text">Welcome, {{ user.first_name }}!</h1>
+    <div class="row mt-5">
+        <div class="col-md-4 animate-card">
+            <div class="card h-100">
+                <div class="card-body text-center">
+                    <i class="fas fa-calendar-plus fa-3x mb-3 text-primary"></i>
+                    <h3 class="card-title">Apply Leave</h3>
+                    <p class="card-text">Submit a new leave request</p>
+                    <a href="{% url 'apply_leave' %}" class="btn btn-primary mt-3">Apply Now</a>
                 </div>
             </div>
         </div>
-    </div>
-
-    <!-- Leave Statistics -->
-    <div class="col-lg-4 col-md-6 mb-4">
-        <div class="card bg-info text-white h-100">
-            <div class="card-body">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <h6 class="text-uppercase mb-2">Casual Leaves</h6>
-                        <h3 class="mb-0">{{ user.casual_leaves_remaining }}</h3>
-                        <small>Remaining</small>
-                    </div>
-                    <div>
-                        <i class="fas fa-calendar-check fa-3x opacity-50"></i>
-                    </div>
+        <div class="col-md-4 animate-card" style="animation-delay: 0.2s">
+            <div class="card h-100">
+                <div class="card-body text-center">
+                    <i class="fas fa-history fa-3x mb-3 text-primary"></i>
+                    <h3 class="card-title">Leave History</h3>
+                    <p class="card-text">View your leave history</p>
+                    <a href="{% url 'leave_history' %}" class="btn btn-primary mt-3">View History</a>
                 </div>
             </div>
         </div>
-    </div>
-
-    <div class="col-lg-4 col-md-6 mb-4">
-        <div class="card bg-success text-white h-100">
-            <div class="card-body">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <h6 class="text-uppercase mb-2">Summer Leaves</h6>
-                        <h3 class="mb-0">{{ user.summer_leaves_remaining }}</h3>
-                        <small>Remaining</small>
-                    </div>
-                    <div>
-                        <i class="fas fa-sun fa-3x opacity-50"></i>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="col-lg-4 col-md-12 mb-4">
-        <div class="card bg-warning text-white h-100">
-            <div class="card-body">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <h6 class="text-uppercase mb-2">Extra Leaves</h6>
-                        <h3 class="mb-0">{{ user.extra_leaves_taken }}</h3>
-                        <small>Taken</small>
-                    </div>
-                    <div>
-                        <i class="fas fa-exclamation-circle fa-3x opacity-50"></i>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Quick Actions -->
-    <div class="col-12">
-        <div class="card h-100">
-            <div class="card-header">
-                <h5 class="mb-0"><i class="fas fa-tasks me-2"></i>Quick Actions</h5>
-            </div>
-            <div class="card-body">
-                <div class="row g-3">
-                    <div class="col-md-4">
-                        <a href="{% url 'apply_leave' %}" class="btn btn-primary w-100 d-flex align-items-center justify-content-center">
-                            <i class="fas fa-calendar-plus me-2"></i>Apply Leave
-                        </a>
-                    </div>
-                    <div class="col-md-4">
-                        <a href="{% url 'leave_history' %}" class="btn btn-info w-100 d-flex align-items-center justify-content-center">
-                            <i class="fas fa-history me-2"></i>Leave History
-                        </a>
-                    </div>
-                    <div class="col-md-4">
-                        <a href="{% url 'change_password' %}" class="btn btn-warning w-100 d-flex align-items-center justify-content-center">
-                            <i class="fas fa-key me-2"></i>Change Password
-                        </a>
-                    </div>
+        <div class="col-md-4 animate-card" style="animation-delay: 0.4s">
+            <div class="card h-100">
+                <div class="card-body text-center">
+                    <i class="fas fa-key fa-3x mb-3 text-primary"></i>
+                    <h3 class="card-title">Change Password</h3>
+                    <p class="card-text">Update your password</p>
+                    <a href="{% url 'change_password' %}" class="btn btn-primary mt-3">Change Now</a>
                 </div>
             </div>
         </div>
     </div>
 </div>
+
+<style>
+    .welcome-section {
+        text-align: center;
+        padding: 2rem 0;
+    }
+
+    .animate-card {
+        opacity: 0;
+        animation: slideUp 0.8s ease forwards;
+    }
+
+    @keyframes slideUp {
+        from {
+            opacity: 0;
+            transform: translateY(50px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .card {
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+        border: none;
+        border-radius: 15px;
+        overflow: hidden;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+    }
+
+    .card:hover {
+        transform: translateY(-10px);
+        box-shadow: 0 15px 30px rgba(0, 0, 0, 0.2);
+    }
+
+    .card-body {
+        padding: 2rem;
+    }
+
+    .fa-3x {
+        transition: transform 0.3s ease;
+    }
+
+    .card:hover .fa-3x {
+        transform: scale(1.2);
+    }
+
+    .btn-primary {
+        border-radius: 25px;
+        padding: 10px 25px;
+        text-transform: uppercase;
+        font-weight: 500;
+        letter-spacing: 1px;
+        transition: all 0.3s ease;
+    }
+
+    .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(78, 84, 200, 0.4);
+    }
+</style>
 {% endblock %}
