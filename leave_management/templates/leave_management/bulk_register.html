@@ -1,0 +1,92 @@
+{% extends 'leave_management/base.html' %}
+{% load crispy_forms_tags %}
+
+{% block content %}
+<div class="card shadow mb-4">
+    <div class="card-header">
+        <h4 class="mb-0">Bulk Register Employees</h4>
+    </div>
+    <div class="card-body">
+        {% if messages %}
+        <div class="mb-4">
+            {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <div class="row mb-4">
+            <div class="col-md-8">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">Upload CSV File</h5>
+                        <form method="post" enctype="multipart/form-data">
+                            {% csrf_token %}
+                            <div class="mb-3">
+                                <label for="csv_file" class="form-label">Choose CSV File</label>
+                                <input type="file" class="form-control" id="csv_file" name="csv_file" accept=".csv" required>
+                            </div>
+                            <button type="submit" class="btn btn-primary">Upload and Register</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">CSV Format</h5>
+                        <p class="card-text">Your CSV file should have the following columns:</p>
+                        <ul class="list-unstyled">
+                            <li><code>employee_id</code> - Unique identifier</li>
+                            <li><code>first_name</code> - First name</li>
+                            <li><code>last_name</code> - Last name</li>
+                            <li><code>department</code> - Department code</li>
+                            <li><code>password</code> - Initial password</li>
+                        </ul>
+                        <div class="mt-3">
+                            <a href="{% url 'download_csv_template' %}" class="btn btn-outline-primary">
+                                <i class="fas fa-download me-2"></i>Download Template
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {% if preview_data %}
+        <div class="table-responsive mt-4">
+            <h5>Preview of Uploaded Data</h5>
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Employee ID</th>
+                        <th>Name</th>
+                        <th>Department</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in preview_data %}
+                    <tr>
+                        <td>{{ row.employee_id }}</td>
+                        <td>{{ row.first_name }} {{ row.last_name }}</td>
+                        <td>{{ row.department }}</td>
+                        <td>
+                            {% if row.status == 'success' %}
+                            <span class="badge bg-success">Success</span>
+                            {% else %}
+                            <span class="badge bg-danger">{{ row.error }}</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

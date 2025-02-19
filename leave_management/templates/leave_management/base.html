@@ -288,14 +288,6 @@
                                 </ul>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link" href="{% url 'admin_notifications' %}">
-                                    <i class="fas fa-bell"></i> Notifications
-                                    {% if failed_attempts_count > 0 %}
-                                    <span class="badge bg-danger">{{ failed_attempts_count }}</span>
-                                    {% endif %}
-                                </a>
-                            </li>
-                            <li class="nav-item">
                                 <a class="nav-link" href="{% url 'notifications' %}">
                                     <i class="fas fa-bell me-2"></i>Notifications
                                 </a>

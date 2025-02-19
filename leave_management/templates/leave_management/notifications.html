@@ -1,68 +1,161 @@
 {% extends 'leave_management/base.html' %}
 
 {% block content %}
+{% csrf_token %}
 <div class="card shadow mb-4">
     <div class="card-header">
         <h4 class="mb-0">Failed Login Attempts</h4>
     </div>
     <div class="card-body">
-        <div id="loginAttemptsGrid" style="height: 500px;" class="ag-theme-alpine"></div>
+        <div class="table-responsive">
+            <table class="table table-striped table-hover">
+                <thead>
+                    <tr>
+                        <th>Username</th>
+                        <th>Attempted At</th>
+                        <th>IP Address</th>
+                        <th>Role</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="loginAttemptsTableBody">
+                </tbody>
+            </table>
+            <nav>
+                <ul class="pagination justify-content-end" id="pagination">
+                </ul>
+            </nav>
+        </div>
     </div>
 </div>
 
-<script src="https://unpkg.com/ag-grid-community/dist/ag-grid-community.min.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    const gridOptions = {
-        columnDefs: [
-            { field: 'username', headerName: 'Username', sortable: true, filter: true },
-            { field: 'attempted_at', headerName: 'Attempted At', sortable: true, filter: true },
-            { field: 'ip_address', headerName: 'IP Address', sortable: true, filter: true },
-            { field: 'role', headerName: 'Role', sortable: true, filter: true },
-            {
-                headerName: 'Actions',
-                cellRenderer: params => {
-                    return `<button onclick="deleteAttempt(${params.data.id})" class="btn btn-danger btn-sm">
+    const itemsPerPage = 10;
+    let currentPage = 1;
+    let allData = [];
+
+    function renderTable(data) {
+        const tableBody = document.getElementById('loginAttemptsTableBody');
+        tableBody.innerHTML = '';
+        
+        data.forEach(item => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${item.username}</td>
+                <td>${item.attempted_at}</td>
+                <td>${item.ip_address || 'N/A'}</td>
+                <td>${item.role}</td>
+                <td>
+                    <button onclick="deleteAttempt(${item.id})" class="btn btn-danger btn-sm">
                         <i class="fas fa-trash"></i>
-                    </button>`;
-                }
+                    </button>
+                </td>
+            `;
+            tableBody.appendChild(row);
+        });
+    }
+
+    function renderPagination(totalItems) {
+        const totalPages = Math.ceil(totalItems / itemsPerPage);
+        const pagination = document.getElementById('pagination');
+        pagination.innerHTML = '';
+
+        // Previous button
+        const prevLi = document.createElement('li');
+        prevLi.className = `page-item ${currentPage === 1 ? 'disabled' : ''}`;
+        prevLi.innerHTML = '<a class="page-link" href="#" aria-label="Previous"><span aria-hidden="true">&laquo;</span></a>';
+        prevLi.onclick = (e) => {
+            e.preventDefault();
+            if (currentPage > 1) {
+                currentPage--;
+                updateDisplay();
             }
-        ],
-        defaultColDef: {
-            flex: 1,
-            minWidth: 100,
-            resizable: true,
-        },
-        rowData: [],
-        pagination: true,
-        paginationPageSize: 10,
-        domLayout: 'autoHeight'
-    };
+        };
+        pagination.appendChild(prevLi);
 
-    const gridDiv = document.querySelector('#loginAttemptsGrid');
-    new agGrid.Grid(gridDiv, gridOptions);
+        // Page numbers
+        for (let i = 1; i <= totalPages; i++) {
+            const li = document.createElement('li');
+            li.className = `page-item ${currentPage === i ? 'active' : ''}`;
+            li.innerHTML = `<a class="page-link" href="#">${i}</a>`;
+            li.onclick = (e) => {
+                e.preventDefault();
+                currentPage = i;
+                updateDisplay();
+            };
+            pagination.appendChild(li);
+        }
 
-    fetch('/leave_management/get_login_attempts/')
-        .then(response => response.json())
+        // Next button
+        const nextLi = document.createElement('li');
+        nextLi.className = `page-item ${currentPage === totalPages ? 'disabled' : ''}`;
+        nextLi.innerHTML = '<a class="page-link" href="#" aria-label="Next"><span aria-hidden="true">&raquo;</span></a>';
+        nextLi.onclick = (e) => {
+            e.preventDefault();
+            if (currentPage < totalPages) {
+                currentPage++;
+                updateDisplay();
+            }
+        };
+        pagination.appendChild(nextLi);
+    }
+
+    function updateDisplay() {
+        const start = (currentPage - 1) * itemsPerPage;
+        const end = start + itemsPerPage;
+        const pageData = allData.slice(start, end);
+        renderTable(pageData);
+        renderPagination(allData.length);
+    }
+
+    fetch('/get_login_attempts/')
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
         .then(data => {
-            gridOptions.api.setRowData(data.data);
+            allData = data.data;
+            updateDisplay();
+        })
+        .catch(error => {
+            console.error('Error fetching login attempts:', error);
+            const tableBody = document.getElementById('loginAttemptsTableBody');
+            tableBody.innerHTML = `
+                <tr>
+                    <td colspan="5" class="text-center text-danger">
+                        Failed to load login attempts. Please try refreshing the page.
+                    </td>
+                </tr>
+            `;
         });
 
     window.deleteAttempt = function(id) {
         if (confirm('Are you sure you want to delete this record?')) {
-            fetch(`/leave_management/delete_login_attempt/${id}/`, {
+            const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+            fetch(`/delete_login_attempt/${id}/`, {
                 method: 'POST',
                 headers: {
-                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                    'X-CSRFToken': csrfToken,
                 }
             })
-            .then(response => response.json())
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
             .then(data => {
                 if (data.status === 'success') {
-                    gridOptions.api.applyTransaction({
-                        remove: [gridOptions.api.getRowNode(id)]
-                    });
+                    allData = allData.filter(item => item.id !== id);
+                    updateDisplay();
                 }
+            })
+            .catch(error => {
+                console.error('Error deleting login attempt:', error);
+                alert('Failed to delete the record. Please try again.');
             });
         }
     };
@@ -70,20 +163,20 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 
 <style>
-.ag-theme-alpine {
-    --ag-header-height: 40px;
-    --ag-header-foreground-color: #2c3e50;
-    --ag-header-background-color: #f8f9fa;
-    --ag-header-cell-hover-background-color: #e9ecef;
-    --ag-header-cell-moving-background-color: #f8f9fa;
-}
-
-.ag-theme-alpine .ag-header-cell {
+.table th {
+    background-color: #f8f9fa;
     font-weight: bold;
+    color: #2c3e50;
 }
 
-.ag-theme-alpine .ag-cell {
-    padding: 8px 15px;
+.table td, .table th {
+    vertical-align: middle;
+    padding: 0.75rem;
+}
+
+.pagination {
+    margin-bottom: 0;
+    margin-top: 1rem;
 }
 </style>
 {% endblock %}

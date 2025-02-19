@@ -120,15 +120,13 @@ class LeaveHistory(models.Model):
         return f"{self.employee.employee_id} - {self.month}/{self.year}"
 
 class LoginAttempt(models.Model):
-    employee_id = models.CharField(max_length=10)
-    timestamp = models.DateTimeField(auto_now_add=True)
-    ip_address = models.GenericIPAddressField()
-    login_type = models.CharField(max_length=20)
-    status = models.CharField(max_length=20)
-    message = models.CharField(max_length=255)
+    username = models.CharField(max_length=100)
+    attempted_at = models.DateTimeField(auto_now_add=True)
+    ip_address = models.CharField(max_length=45, blank=True, null=True)
+    role = models.CharField(max_length=20)
+    
+    def __str__(self):
+        return f"{self.username} - {self.attempted_at}"
 
     class Meta:
-        ordering = ['-timestamp']
-
-    def __str__(self):
-        return f"{self.employee_id} - {self.timestamp.strftime('%Y-%m-%d %H:%M:%S')} - {self.status}"
+        ordering = ['-attempted_at']

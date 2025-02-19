@@ -3,6 +3,8 @@ from django.contrib.auth import login, logout, authenticate
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib import messages
 from django.utils import timezone
+from django.http import JsonResponse
+from django.views.decorators.http import require_POST
 from datetime import date
 import json
 from .models import Employee, LeaveRequest, LeaveHistory, LoginAttempt
@@ -10,9 +12,10 @@ from django.contrib.auth.views import LoginView, PasswordChangeView
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.urls import reverse_lazy
 from django import forms
-from django.http import JsonResponse
-from django.views.decorators.http import require_POST
 from django.db.models import Q
+import csv
+from io import TextIOWrapper
+from django.http import HttpResponse
 
 def is_admin(user):
     return user.is_admin
@@ -33,61 +36,47 @@ class LeaveRequestForm(forms.ModelForm):
             'end_date': forms.DateInput(attrs={'type': 'date'}),
         }
 
-def login_view(request):
-    if request.method == 'POST':
-        employee_id = request.POST.get('employee_id')
-        password = request.POST.get('password')
-        login_type = request.POST.get('login_type')
-
-        if not login_type:
-            messages.error(request, 'Please select a login type')
-            return render(request, 'leave_management/login.html')
-
-        try:
-            user = Employee.objects.get(employee_id=employee_id)
+class CustomLoginView(LoginView):
+    template_name = 'leave_management/login.html'
+    
+    def form_valid(self, form):
+        username = form.cleaned_data.get('username', '').upper()
+        password = form.cleaned_data.get('password')
+        role = self.request.POST.get('role')
+        
+        if not role:
+            messages.error(self.request, 'Please select a role')
+            return self.form_invalid(form)
             
-            # Verify login type
-            if login_type == 'admin' and not user.is_admin:
-                record_login_attempt(request, employee_id, login_type, 'failed', 'Employee tried to login as admin')
-                messages.error(request, 'Invalid login type for this employee')
-                return render(request, 'leave_management/login.html')
-            elif login_type == 'employee' and user.is_admin:
-                record_login_attempt(request, employee_id, login_type, 'failed', 'Admin tried to login as employee')
-                messages.error(request, 'Invalid login type for admin')
-                return render(request, 'leave_management/login.html')
-
-            # Authenticate user
-            if user.check_password(password):
-                login(request, user)
-                record_login_attempt(request, employee_id, login_type, 'success', 'Login successful')
-                if user.is_admin:
-                    return redirect('admin_home')
-                return redirect('home')
-            else:
-                record_login_attempt(request, employee_id, login_type, 'failed', 'Invalid password')
-                messages.error(request, 'Invalid credentials')
-        except Employee.DoesNotExist:
-            record_login_attempt(request, employee_id, login_type, 'failed', 'Employee ID not found')
-            messages.error(request, 'Invalid credentials')
-
-    return render(request, 'leave_management/login.html')
-
-def record_login_attempt(request, employee_id, login_type, status, message):
-    LoginAttempt.objects.create(
-        employee_id=employee_id,
-        ip_address=get_client_ip(request),
-        login_type=login_type,
-        status=status,
-        message=message
-    )
-
-def get_client_ip(request):
-    x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
-    if x_forwarded_for:
-        ip = x_forwarded_for.split(',')[0]
-    else:
-        ip = request.META.get('REMOTE_ADDR')
-    return ip
+        # Convert username to lowercase for case-insensitive comparison
+        user = Employee.objects.filter(employee_id__iexact=username).first()
+        
+        if user and user.check_password(password):
+            # Validate role selection
+            if (role == 'employer' and not user.is_admin) or (role == 'employee' and user.is_admin):
+                self._record_failed_attempt(username, role)
+                messages.error(self.request, 'Invalid credentials or incorrect role selected')
+                return self.form_invalid(form)
+            
+            # Set the user for authentication
+            form.cleaned_data['username'] = user.username
+            return super().form_valid(form)
+        else:
+            self._record_failed_attempt(username, role)
+            messages.error(self.request, 'Invalid credentials or incorrect role selected')
+            return self.form_invalid(form)
+    
+    def _record_failed_attempt(self, username, role):
+        LoginAttempt.objects.create(
+            username=username,
+            role=role,
+            ip_address=self.request.META.get('REMOTE_ADDR', '')
+        )
+    
+    def get_success_url(self):
+        if self.request.user.is_admin:
+            return reverse_lazy('admin_home')
+        return reverse_lazy('home')
 
 class ChangePasswordView(LoginRequiredMixin, PasswordChangeView):
     template_name = 'leave_management/change_password.html'
@@ -193,7 +182,7 @@ def leave_applications(request):
 @user_passes_test(is_admin)
 def employee_leave_history(request):
     # Get search query and department filter
-    search_query = request.GET.get('search', '')
+    search_query = request.GET.get('search', '').lower()
     selected_department = request.GET.get('department', '')
     
     # Start with all non-admin employees
@@ -201,7 +190,7 @@ def employee_leave_history(request):
     
     # Apply search filter if provided
     if search_query:
-        employees = employees.filter(employee_id__iexact=search_query)
+        employees = employees.filter(employee_id__icontains=search_query)
     
     # Apply department filter if provided
     if selected_department:
@@ -317,12 +306,12 @@ def register_employee(request):
 @user_passes_test(is_admin)
 def delete_employee(request):
     if request.method == 'POST':
-        employee_id = request.POST.get('employee_id')
+        employee_id = request.POST.get('employee_id', '').upper()
         admin_password = request.POST.get('password')
         
         if request.user.check_password(admin_password):
             try:
-                employee = Employee.objects.get(employee_id=employee_id)
+                employee = Employee.objects.get(employee_id__iexact=employee_id)
                 if not employee.is_admin:
                     employee.delete()
                     messages.success(request, 'Employee deleted successfully!')
@@ -354,15 +343,29 @@ def approve_leave(request, leave_id):
         
         # Calculate and update leaves
         employee = leave_request.employee
-        if employee.casual_leaves_remaining >= leave_request.number_of_days:
-            employee.casual_leaves_remaining -= leave_request.number_of_days
-            history.casual_leaves_taken += leave_request.number_of_days
+        
+        # Update employee's leave balance
+        employee.update_leaves()
+        
+        if month == 5:  # May - Summer leave
+            history.summer_leaves_taken += leave_request.number_of_days
+            employee.summer_leaves_remaining = max(0, employee.summer_leaves_remaining - leave_request.number_of_days)
         else:
-            extra_leaves = leave_request.number_of_days - employee.casual_leaves_remaining
-            history.casual_leaves_taken += employee.casual_leaves_remaining
-            history.extra_leaves_taken += extra_leaves
-            employee.casual_leaves_remaining = 0
-            employee.extra_leaves_taken += extra_leaves
+            if employee.casual_leaves_remaining >= leave_request.number_of_days:
+                history.casual_leaves_taken += leave_request.number_of_days
+                employee.casual_leaves_remaining -= leave_request.number_of_days
+            else:
+                # If casual leaves are not enough, use them all and mark the rest as extra
+                if employee.casual_leaves_remaining > 0:
+                    history.casual_leaves_taken += employee.casual_leaves_remaining
+                    extra_leaves = leave_request.number_of_days - employee.casual_leaves_remaining
+                    history.extra_leaves_taken += extra_leaves
+                    employee.extra_leaves_taken += extra_leaves
+                    employee.casual_leaves_remaining = 0
+                else:
+                    # If no casual leaves remaining, all are extra
+                    history.extra_leaves_taken += leave_request.number_of_days
+                    employee.extra_leaves_taken += leave_request.number_of_days
         
         employee.save()
         history.save()
@@ -407,99 +410,164 @@ def delete_login_attempt(request, attempt_id):
 @login_required
 @user_passes_test(is_admin)
 def employee_leave_report(request):
-    search_id = request.GET.get('employee_id', '')
+    search_id = request.GET.get('employee_id', '').upper()
     current_year = timezone.now().year
     context = {'search_id': search_id}
     
     if search_id:
-        employee = get_object_or_404(Employee, employee_id=search_id)
-        leave_requests = LeaveRequest.objects.filter(
-            employee=employee,
-            start_date__year=current_year
-        ).order_by('-created_at')
-        
-        # Initialize monthly report
-        monthly_report = []
-        months = {
-            1: 'January', 2: 'February', 3: 'March', 4: 'April',
-            5: 'May', 6: 'June', 7: 'July', 8: 'August',
-            9: 'September', 10: 'October', 11: 'November', 12: 'December'
-        }
-        
-        # Initialize yearly totals
-        yearly_totals = {
-            'casual_leaves': 0,
-            'extra_leaves': 0,
-            'summer_leaves': 0,
-            'total_days': 0
-        }
-        
-        # Calculate monthly totals
-        for month_num in range(1, 13):
-            month_leaves = leave_requests.filter(
-                start_date__month=month_num,
+        try:
+            employee = Employee.objects.get(employee_id__iexact=search_id)
+            leave_requests = LeaveRequest.objects.filter(
+                employee=employee,
+                start_date__year=current_year,
                 status='APPROVED'
             )
             
-            casual_leaves = month_leaves.exclude(start_date__month=5).count()
-            summer_leaves = month_leaves.filter(start_date__month=5).count()
+            # Initialize monthly report
+            monthly_report = []
+            months = {
+                1: 'January', 2: 'February', 3: 'March', 4: 'April',
+                5: 'May', 6: 'June', 7: 'July', 8: 'August',
+                9: 'September', 10: 'October', 11: 'November', 12: 'December'
+            }
             
-            # Calculate extra leaves for this month
-            total_casual = casual_leaves
-            extra_leaves = max(0, total_casual - employee.casual_leaves_remaining)
-            casual_leaves = min(total_casual, employee.casual_leaves_remaining)
+            # Initialize yearly totals
+            yearly_totals = {
+                'casual_leaves': 0,
+                'extra_leaves': 0,
+                'summer_leaves': 0,
+                'total_days': 0
+            }
             
-            total_days = casual_leaves + extra_leaves + summer_leaves
+            # Get leave history records for the year
+            leave_histories = LeaveHistory.objects.filter(
+                employee=employee,
+                year=current_year
+            )
             
-            monthly_report.append({
-                'month_name': months[month_num],
-                'casual_leaves': casual_leaves,
-                'extra_leaves': extra_leaves,
-                'summer_leaves': summer_leaves,
-                'total_days': total_days
+            # Calculate monthly totals from leave history
+            for month_num in range(1, 13):
+                month_history = leave_histories.filter(month=month_num).first()
+                
+                if month_history:
+                    casual_leaves = month_history.casual_leaves_taken
+                    extra_leaves = month_history.extra_leaves_taken
+                    summer_leaves = month_history.summer_leaves_taken
+                else:
+                    casual_leaves = 0
+                    extra_leaves = 0
+                    summer_leaves = 0
+                
+                total_days = casual_leaves + extra_leaves + summer_leaves
+                
+                monthly_report.append({
+                    'month_name': months[month_num],
+                    'casual_leaves': casual_leaves,
+                    'extra_leaves': extra_leaves,
+                    'summer_leaves': summer_leaves,
+                    'total_days': total_days
+                })
+                
+                # Update yearly totals
+                yearly_totals['casual_leaves'] += casual_leaves
+                yearly_totals['extra_leaves'] += extra_leaves
+                yearly_totals['summer_leaves'] += summer_leaves
+                yearly_totals['total_days'] += total_days
+            
+            # Prepare leave history
+            leave_history = []
+            for leave in leave_requests:
+                leave_type = 'Summer' if leave.start_date.month == 5 else 'Regular'
+                leave_history.append({
+                    'start_date': leave.start_date.strftime('%Y-%m-%d'),
+                    'end_date': leave.end_date.strftime('%Y-%m-%d'),
+                    'number_of_days': (leave.end_date - leave.start_date).days + 1,
+                    'type': leave_type,
+                    'reason': leave.reason,
+                    'status': leave.status,
+                    'applied_date': leave.created_at.strftime('%Y-%m-%d %H:%M')
+                })
+            
+            context.update({
+                'employee': employee,
+                'monthly_report': monthly_report,
+                'yearly_totals': yearly_totals,
+                'leave_history': leave_history,
+                'casual_leaves_remaining': employee.casual_leaves_remaining,
+                'summer_leaves_remaining': employee.summer_leaves_remaining,
+                'total_extra_leaves': yearly_totals['extra_leaves'],
+                'current_year': current_year
             })
-            
-            # Update yearly totals
-            yearly_totals['casual_leaves'] += casual_leaves
-            yearly_totals['extra_leaves'] += extra_leaves
-            yearly_totals['summer_leaves'] += summer_leaves
-            yearly_totals['total_days'] += total_days
-        
-        # Prepare leave history
-        leave_history = []
-        for leave in leave_requests:
-            leave_type = 'Summer' if leave.start_date.month == 5 else 'Regular'
-            leave_history.append({
-                'start_date': leave.start_date.strftime('%Y-%m-%d'),
-                'end_date': leave.end_date.strftime('%Y-%m-%d'),
-                'number_of_days': (leave.end_date - leave.start_date).days + 1,
-                'type': leave_type,
-                'reason': leave.reason,
-                'status': leave.status,
-                'applied_date': leave.created_at.strftime('%Y-%m-%-d %H:%M')
-            })
-        
-        context.update({
-            'employee': employee,
-            'monthly_report': monthly_report,
-            'yearly_totals': yearly_totals,
-            'leave_history': leave_history,
-            'casual_leaves_remaining': employee.casual_leaves_remaining,
-            'summer_leaves_remaining': employee.summer_leaves_remaining,
-            'total_extra_leaves': yearly_totals['extra_leaves'],
-            'current_year': current_year
-        })
+        except Employee.DoesNotExist:
+            messages.error(request, f'No employee found with ID: {search_id}')
     
     return render(request, 'leave_management/employee_leave_report.html', context)
 
 @login_required
 @user_passes_test(is_admin)
-def admin_notifications(request):
-    login_attempts = LoginAttempt.objects.all()[:50]  # Get last 50 attempts
-    failed_attempts_count = LoginAttempt.objects.filter(status='failed').count()
+def bulk_register(request):
+    if request.method == 'POST' and request.FILES.get('csv_file'):
+        csv_file = TextIOWrapper(request.FILES['csv_file'].file, encoding='utf-8')
+        reader = csv.DictReader(csv_file)
+        preview_data = []
+        
+        for row in reader:
+            try:
+                # Validate department
+                if row['department'] not in dict(Employee.DEPARTMENT_CHOICES):
+                    raise ValueError(f"Invalid department: {row['department']}")
+                
+                # Check if employee_id already exists
+                if Employee.objects.filter(employee_id__iexact=row['employee_id']).exists():
+                    raise ValueError(f"Employee ID already exists: {row['employee_id']}")
+                
+                # Create the employee
+                employee = Employee.objects.create(
+                    username=row['employee_id'].upper(),
+                    employee_id=row['employee_id'].upper(),
+                    first_name=row['first_name'],
+                    last_name=row['last_name'],
+                    department=row['department'],
+                    is_admin=False
+                )
+                employee.set_password(row['password'])
+                employee.save()
+                
+                preview_data.append({
+                    'employee_id': employee.employee_id,
+                    'first_name': employee.first_name,
+                    'last_name': employee.last_name,
+                    'department': employee.get_department_display(),
+                    'status': 'success'
+                })
+                
+                messages.success(request, f'Successfully registered {len(preview_data)} employees.')
+                
+            except Exception as e:
+                preview_data.append({
+                    'employee_id': row.get('employee_id', 'N/A'),
+                    'first_name': row.get('first_name', 'N/A'),
+                    'last_name': row.get('last_name', 'N/A'),
+                    'department': row.get('department', 'N/A'),
+                    'status': 'error',
+                    'error': str(e)
+                })
+                messages.error(request, f'Error registering some employees. Please check the preview below.')
+        
+        return render(request, 'leave_management/bulk_register.html', {'preview_data': preview_data})
     
-    context = {
-        'login_attempts': login_attempts,
-        'failed_attempts_count': failed_attempts_count
-    }
-    return render(request, 'leave_management/admin_notifications.html', context)
+    return render(request, 'leave_management/bulk_register.html')
+
+@login_required
+@user_passes_test(is_admin)
+def download_csv_template(request):
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = 'attachment; filename="employee_template.csv"'
+    
+    writer = csv.writer(response)
+    writer.writerow(['employee_id', 'first_name', 'last_name', 'department', 'password'])
+    
+    # Add a sample row
+    writer.writerow(['UR01', 'John', 'Doe', 'CSE', 'welcome123'])
+    
+    return response
