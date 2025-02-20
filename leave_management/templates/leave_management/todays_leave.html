@@ -1,0 +1,35 @@
+{% extends 'leave_management/base.html' %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>Today's Leaves</h2>
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Employee ID</th>
+                <th>Name</th>
+                <th>Department</th>
+                <th>Leave Type</th>
+                <th>Start Date</th>
+                <th>End Date</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for leave in todays_leaves %}
+            <tr>
+                <td>{{ leave.employee.id }}</td>
+                <td>{{ leave.employee.name }}</td>
+                <td>{{ leave.employee.department }}</td>
+                <td>{{ leave.leave_type }}</td>
+                <td>{{ leave.start_date }}</td>
+                <td>{{ leave.end_date }}</td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="6">No employees on leave today.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

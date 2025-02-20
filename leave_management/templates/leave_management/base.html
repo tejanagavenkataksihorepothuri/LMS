@@ -8,344 +8,247 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
         :root {
-            --primary-color: #4e54c8;
-            --secondary-color: #8f94fb;
-            --accent-color: #ff6b6b;
-            --success-color: #2ecc71;
-            --warning-color: #f1c40f;
-            --danger-color: #e74c3c;
-            --light-color: #f8f9fa;
-            --dark-color: #2c3e50;
-        }
-
-        @keyframes gradientBG {
-            0% { background-position: 0% 50%; }
-            50% { background-position: 100% 50%; }
-            100% { background-position: 0% 50%; }
-        }
-
-        @keyframes slideInDown {
-            from {
-                transform: translateY(-100%);
-                opacity: 0;
-            }
-            to {
-                transform: translateY(0);
-                opacity: 1;
-            }
-        }
-
-        @keyframes pulse {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.05); }
-            100% { transform: scale(1); }
-        }
-
-        .college-header {
-            background: linear-gradient(-45deg, #ff0000, #ff6b6b, #4e54c8, #8f94fb);
-            background-size: 400% 400%;
-            animation: gradientBG 15s ease infinite;
-            color: white;
-            text-align: center;
-            padding: 15px;
-            font-size: 28px;
-            font-weight: bold;
-            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
-            letter-spacing: 2px;
-            animation: slideInDown 1s ease-out;
-        }
-
-        .college-name {
-            display: inline-block;
-            animation: pulse 2s infinite;
+            --primary-color: #2c3e50; /* Dark Blue */
+            --secondary-color: #f39c12; /* Bright Orange */
+            --accent-color: #e74c3c; /* Red */
+            --background-color: #ecf0f1; /* Light Gray */
+            --text-color: #2c3e50; /* Dark Gray */
+            --hover-color: #d35400; /* Darker Orange */
         }
 
         body {
-            background: linear-gradient(135deg, var(--light-color), #e0e0e0);
-            min-height: 100vh;
-            padding-top: 0;
+            background-color: var(--background-color);
+            color: var(--text-color);
+            font-family: 'Roboto', sans-serif;
+            margin: 0;
+            overflow-x: hidden;
+        }
+
+        .header {
+            background-color: var(--primary-color);
+            color: white;
+            text-align: center;
+            padding: 10px 0;
+            font-size: 1.5em;
+            font-weight: bold;
         }
 
         .navbar {
-            background: linear-gradient(45deg, var(--primary-color), var(--secondary-color)) !important;
-            box-shadow: 0 2px 15px rgba(0, 0, 0, 0.1);
-            animation: slideInDown 1s ease-out;
-        }
-
-        .content-section {
-            animation: fadeIn 1s ease-out;
-        }
-
-        @keyframes fadeIn {
-            from {
-                opacity: 0;
-                transform: translateY(20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
+            background-color: white;
+            color: var(--text-color);
+            padding: 10px 20px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-left: 250px;
         }
 
         .navbar-brand {
-            font-size: 1.5rem;
+            color: var(--primary-color);
             font-weight: bold;
-            color: white !important;
-            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
         }
 
-        .nav-link {
-            color: white !important;
-            font-weight: 500;
-            transition: all 0.3s ease;
-            margin: 0 5px;
-            padding: 8px 15px !important;
-            border-radius: 20px;
+        .navbar .user-info {
+            color: var(--text-color);
+            font-size: 0.9em;
         }
 
-        .nav-link:hover {
-            background-color: rgba(255, 255, 255, 0.2);
+        .sidebar {
+            background-color: var(--secondary-color);
+            color: white;
+            padding: 20px;
+            width: 250px;
+            height: 100vh;
+            position: fixed;
+            top: 0;
+            left: 0;
+            transition: transform 0.3s ease-in-out;
+        }
+
+        .sidebar a {
+            color: white;
+            padding: 15px 20px;
+            display: block;
+            text-decoration: none;
+            transition: background 0.3s, transform 0.3s;
+        }
+
+        .sidebar a:hover {
+            background-color: var(--hover-color);
+            transform: translateX(10px);
+        }
+
+        .content {
+            margin-left: 250px;
+            padding: 20px;
+            transition: margin-left 0.3s ease-in-out;
+        }
+
+        .btn-custom {
+            background-color: var(--accent-color);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            cursor: pointer;
+            transition: background 0.3s, transform 0.3s;
+        }
+
+        .btn-custom:hover {
+            background-color: var(--hover-color);
             transform: translateY(-2px);
         }
 
-        .welcome-text {
-            font-size: 2.5rem;
-            background: linear-gradient(45deg, var(--primary-color), var(--accent-color));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            text-align: center;
-            margin-top: 2rem;
-            animation: fadeInUp 1.5s ease-out;
-        }
-
-        .card {
+        .navbar-toggler {
             border: none;
-            border-radius: 15px;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-            transition: all 0.3s ease;
-            background: white;
-            margin-bottom: 1.5rem;
+            background: transparent;
+            color: var(--text-color);
+            font-size: 1.5em;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-around;
+            height: 24px;
+            width: 30px;
+            padding: 0;
         }
 
-        .card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+        .navbar-toggler-icon {
+            width: 100%;
+            height: 3px;
+            background-color: var(--text-color);
         }
 
-        .card-header {
-            background: linear-gradient(45deg, var(--primary-color), var(--secondary-color));
-            color: white;
-            border-radius: 15px 15px 0 0 !important;
-            padding: 1rem;
+        .dropdown-content {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            width: 100%;
+            background-color: var(--background-color);
+            box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+            z-index: 1;
         }
 
-        .btn-primary {
-            background: linear-gradient(45deg, var(--primary-color), var(--secondary-color));
-            border: none;
-            border-radius: 25px;
-            padding: 10px 25px;
-            transition: all 0.3s ease;
+        .dropdown-content a {
+            color: var(--text-color);
+            padding: 12px 16px;
+            text-decoration: none;
+            display: block;
         }
 
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(78, 84, 200, 0.4);
+        .show {
+            display: block;
         }
 
-        .btn-success {
-            background: linear-gradient(45deg, #2ecc71, #27ae60);
-            border: none;
-        }
-
-        .btn-danger {
-            background: linear-gradient(45deg, #e74c3c, #c0392b);
-            border: none;
-        }
-
-        .alert {
-            border-radius: 15px;
-            border: none;
-            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
-        }
-
-        .table {
-            background: white;
-            border-radius: 15px;
-            overflow: hidden;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-        }
-
-        .table thead {
-            background: linear-gradient(45deg, var(--primary-color), var(--secondary-color));
-            color: white;
-        }
-
-        .badge {
-            padding: 8px 12px;
-            border-radius: 20px;
-            font-weight: 500;
-        }
-
-        .badge-pending {
-            background: var(--warning-color);
-            color: var(--dark-color);
-        }
-
-        .badge-approved {
-            background: var(--success-color);
-        }
-
-        .badge-rejected {
-            background: var(--danger-color);
-        }
-
-        @keyframes fadeInUp {
-            from {
-                opacity: 0;
-                transform: translateY(20px);
+        @media (max-width: 768px) {
+            .sidebar {
+                transform: translateX(-100%);
             }
-            to {
-                opacity: 1;
-                transform: translateY(0);
+            .sidebar.active {
+                transform: translateX(0);
             }
-        }
-
-        /* Custom form styling */
-        .form-control {
-            border-radius: 10px;
-            border: 2px solid #e0e0e0;
-            padding: 12px;
-            transition: all 0.3s ease;
-        }
-
-        .form-control:focus {
-            border-color: var(--primary-color);
-            box-shadow: 0 0 0 0.2rem rgba(78, 84, 200, 0.25);
-        }
-
-        /* Custom animation for cards */
-        .card {
-            animation: fadeIn 0.8s ease-out;
-        }
-
-        @keyframes fadeIn {
-            from {
-                opacity: 0;
-                transform: translateY(20px);
+            .content {
+                margin-left: 0;
             }
-            to {
-                opacity: 1;
-                transform: translateY(0);
+            .navbar {
+                margin-left: 0;
+            }
+            .navbar-toggler {
+                display: flex;
             }
         }
     </style>
 </head>
-<body class="bg-light">
-    <div class="college-header">
-        <span class="college-name">USHA RAMA COLLEGE OF ENGINEERING</span>
-    </div>
-    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
-        <div class="container">
-            <a class="navbar-brand" href="{% url 'home' %}">Leave Management System</a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+<body>
+    <div class="header">Usha Rama College of Engineering</div>
+    {% if not request.path == '/login/' %}
+        {% if user.is_staff %}  <!-- Admin Sidebar -->
+            <div class="sidebar">
+                <a href="{% url 'admin_home' %}"><i class="fas fa-home"></i> Admin Dashboard</a>
+                <a href="{% url 'employee_list' %}"><i class="fas fa-users"></i> Employee List</a>
+                <a href="{% url 'leave_applications' %}"><i class="fas fa-clipboard-list"></i> Leave Applications</a>
+                <a href="{% url 'register_employee' %}"><i class="fas fa-user-plus"></i> Register Employee</a>
+                <a href="{% url 'bulk_register' %}"><i class="fas fa-file-upload"></i> Bulk Register</a>
+                <form id="logout-form" action="{% url 'logout' %}" method="post" style="display: none;">
+                    {% csrf_token %}
+                </form>
+                <a href="#" onclick="event.preventDefault(); document.getElementById('logout-form').submit();">
+                    <i class="fas fa-sign-out-alt"></i> Logout
+                </a>
+            </div>
+        {% else %}  <!-- User Sidebar -->
+            <div class="sidebar">
+                <a href="{% url 'home' %}"><i class="fas fa-home"></i> Home</a>
+                <a href="{% url 'apply_leave' %}"><i class="fas fa-calendar-plus"></i> Apply Leave</a>
+                <a href="{% url 'leave_history' %}"><i class="fas fa-history"></i> Leave History</a>
+                <form id="logout-form" action="{% url 'logout' %}" method="post" style="display: none;">
+                    {% csrf_token %}
+                </form>
+                <a href="#" onclick="event.preventDefault(); document.getElementById('logout-form').submit();">
+                    <i class="fas fa-sign-out-alt"></i> Logout
+                </a>
+            </div>
+        {% endif %}
+        <header class="navbar navbar-expand-lg">
+            <a class="navbar-brand" href="{% if user.is_staff %}{% url 'admin_home' %}{% else %}{% url 'home' %}{% endif %}">Leave Management System</a>
+            <div class="user-info">{{ user.username }} - {{ user.branch }}</div>
+            <button class="navbar-toggler" type="button">
+                <span class="navbar-toggler-icon"></span>
+                <span class="navbar-toggler-icon"></span>
                 <span class="navbar-toggler-icon"></span>
             </button>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                {% if user.is_authenticated %}
-                    {% if user.is_admin %}
-                        <ul class="navbar-nav">
-                            <li class="nav-item">
-                                <a class="nav-link" href="{% url 'admin_home' %}">
-                                    <i class="fas fa-home"></i> Home
-                                </a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link" href="{% url 'leave_applications' %}">
-                                    <i class="fas fa-clipboard-list"></i> Leave Applications
-                                </a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link" href="{% url 'employee_leave_history' %}">
-                                    <i class="fas fa-history"></i> Employee History
-                                </a>
-                            </li>
-                            <li class="nav-item">
-                            <li class="nav-item dropdown">
-                                <a class="nav-link dropdown-toggle" href="#" id="navbarDropdownMenuLink" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                    <i class="fas fa-user"></i> Employee
-                                </a>
-                                <ul class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
-                                    <li>
-                                        <a class="dropdown-item" href="{% url 'register_employee' %}">
-                                            <i class="fas fa-user-plus"></i> Register
-                                        </a>
-                                    </li>
-                                    <li>
-                                        <a class="dropdown-item" href="{% url 'delete_employee' %}">
-                                            <i class="fas fa-user-minus"></i> Delete
-                                        </a>
-                                    </li>
-                                </ul>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link" href="{% url 'notifications' %}">
-                                    <i class="fas fa-bell me-2"></i>Notifications
-                                </a>
-                            </li>
-                        </ul>
-                    {% else %}
-                        <ul class="navbar-nav">
-                            <li class="nav-item">
-                                <a class="nav-link" href="{% url 'home' %}">
-                                    <i class="fas fa-home"></i> Home
-                                </a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link" href="{% url 'apply_leave' %}">
-                                    <i class="fas fa-calendar-plus"></i> Apply Leave
-                                </a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link" href="{% url 'leave_history' %}">
-                                    <i class="fas fa-history"></i> History
-                                </a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link" href="{% url 'change_password' %}">
-                                    <i class="fas fa-key"></i> Password
-                                </a>
-                            </li>
-                        </ul>
-                    {% endif %}
-                    <ul class="navbar-nav ms-auto">
-                        <li class="nav-item">
-                            <form method="post" action="{% url 'logout' %}" class="d-inline">
-                                {% csrf_token %}
-                                <button type="submit" class="btn nav-link">
-                                    <i class="fas fa-sign-out-alt"></i> Logout
-                                </button>
-                            </form>
-                        </li>
-                    </ul>
-                {% endif %}
-            </div>
-        </div>
-    </nav>
-
-    <div class="container mt-4 content-section">
-        {% if messages %}
-            {% for message in messages %}
-                <div class="alert alert-{{ message.tags }} alert-dismissible fade show">
-                    {{ message }}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            {% if user.is_staff %}
+                <div class="dropdown-content">
+                    <a href="{% url 'admin_home' %}"><i class="fas fa-home"></i> Admin Dashboard</a>
+                    <a href="{% url 'employee_list' %}"><i class="fas fa-users"></i> Employee List</a>
+                    <a href="{% url 'leave_applications' %}"><i class="fas fa-clipboard-list"></i> Leave Applications</a>
+                    <a href="{% url 'register_employee' %}"><i class="fas fa-user-plus"></i> Register Employee</a>
+                    <a href="{% url 'bulk_register' %}"><i class="fas fa-file-upload"></i> Bulk Register</a>
+                    <a href="#" onclick="event.preventDefault(); document.getElementById('logout-form').submit();">
+                        <i class="fas fa-sign-out-alt"></i> Logout
+                    </a>
                 </div>
-            {% endfor %}
-        {% endif %}
-
-        {% block content %}
-        {% endblock %}
+            {% else %}
+                <div class="dropdown-content">
+                    <a href="{% url 'home' %}"><i class="fas fa-home"></i> Home</a>
+                    <a href="{% url 'apply_leave' %}"><i class="fas fa-calendar-plus"></i> Apply Leave</a>
+                    <a href="{% url 'leave_history' %}"><i class="fas fa-history"></i> Leave History</a>
+                    <a href="#" onclick="event.preventDefault(); document.getElementById('logout-form').submit();">
+                        <i class="fas fa-sign-out-alt"></i> Logout
+                    </a>
+                </div>
+            {% endif %}
+        </header>
+    {% endif %}
+    <div class="content">
+        <div class="container mt-4 fade-in">
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }} alert-dismissible fade show">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+            {% block content %}{% endblock %}
+        </div>
     </div>
-
+    <footer class="footer">
+        <div class="container">
+            <p>&copy; 2025 Usha Rama College of Engineering. All rights reserved.</p>
+        </div>
+    </footer>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const toggleButton = document.querySelector('.navbar-toggler');
+            const dropdownContent = document.querySelector('.dropdown-content');
+
+            toggleButton.addEventListener('click', function() {
+                dropdownContent.classList.toggle('show');
+            });
+        });
+    </script>
 </body>
 </html>

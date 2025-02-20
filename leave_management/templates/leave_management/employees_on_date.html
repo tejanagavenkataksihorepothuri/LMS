@@ -1,0 +1,46 @@
+{% extends 'leave_management/base.html' %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>Employees on Leave</h2>
+    <form method="post">
+        {% csrf_token %}
+        <div class="form-group">
+            <label for="date">Select Date:</label>
+            <input type="date" class="form-control" id="date" name="date" required>
+        </div>
+        <button type="submit" class="btn btn-primary mt-2">Submit</button>
+    </form>
+    {% if selected_date %}
+    <h4 class="mt-4">Leaves on {{ selected_date }}</h4>
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Employee ID</th>
+                <th>Name</th>
+                <th>Department</th>
+                <th>Leave Type</th>
+                <th>Start Date</th>
+                <th>End Date</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for leave in leaves_on_date %}
+            <tr>
+                <td>{{ leave.employee.id }}</td>
+                <td>{{ leave.employee.name }}</td>
+                <td>{{ leave.employee.department }}</td>
+                <td>{{ leave.leave_type }}</td>
+                <td>{{ leave.start_date }}</td>
+                <td>{{ leave.end_date }}</td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="6">No employees on leave on this date.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
+</div>
+{% endblock %}

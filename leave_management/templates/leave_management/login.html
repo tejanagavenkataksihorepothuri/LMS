@@ -1,111 +1,285 @@
+
 {% extends 'leave_management/base.html' %}
 {% load crispy_forms_tags %}
 
 {% block content %}
-<div class="row justify-content-center">
-    <div class="col-md-6">
-        <div class="card shadow">
-            <div class="card-header text-center">
-                <h2 class="mb-0">Welcome Back!</h2>
-            </div>
-            <div class="card-body p-4">
-                <div class="text-center mb-4">
-                    <i class="fas fa-user-circle fa-4x text-primary mb-3"></i>
-                </div>
-                <form method="post" class="login-form">
-                    {% csrf_token %}
-                    {% if messages %}
-                    <div class="mb-4">
-                        {% for message in messages %}
-                            <div class="alert alert-{% if message.tags %}{{ message.tags }}{% endif %} alert-dismissible fade show" role="alert">
-                                {{ message }}
-                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                            </div>
-                        {% endfor %}
-                    </div>
-                    {% endif %}
-                    <div class="mb-4">
-                        <label for="role" class="form-label">
-                            <i class="fas fa-user-tag me-2"></i>Login As
-                        </label>
-                        <select name="role" class="form-control" required id="role">
-                            <option value="">Select Role</option>
-                            <option value="employee">Employee</option>
-                            <option value="employer">Employer</option>
-                        </select>
-                    </div>
-                    <div class="mb-4">
-                        <label for="username" class="form-label">
-                            <i class="fas fa-id-card me-2"></i>Employee ID
-                        </label>
-                        <input type="text" name="username" class="form-control" required id="username" placeholder="Enter your Employee ID" style="text-transform: uppercase;">
-                    </div>
-                    <div class="mb-4">
-                        <label for="password" class="form-label">
-                            <i class="fas fa-lock me-2"></i>Password
-                        </label>
-                        <input type="password" name="password" class="form-control" required id="password" placeholder="Enter your password">
-                    </div>
-                    <div class="d-grid">
-                        <button type="submit" class="btn btn-primary btn-lg">
-                            <i class="fas fa-sign-in-alt me-2"></i>Login
-                        </button>
-                    </div>
-                </form>
+<div class="login-container">
+    <div class="college-name">
+        <h1>Usha Rama College of Engineering</h1>
+    </div>
+    
+    {% if messages %}
+    <div class="alert-container">   
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags }}">
+            {{ message }}
+
+            <button type="button" class="alert-close" onclick="this.parentElement.style.display='none'">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="login-box">
+        <div class="login-header">
+            <h2>Welcome Back!</h2>
+            <div class="avatar-circle">
+                <i class="fas fa-user"></i>
             </div>
         </div>
+        <form method="post" class="login-form">
+            {% csrf_token %}
+            <div class="form-group">
+                <label for="role">
+                    <i class="fas fa-user-tag"></i> Login As
+                </label>
+                <select name="role" class="form-control" required id="role">
+                    <option value="">Select Role</option>
+                    <option value="employee">Employee</option>
+                    <option value="employer">Employer</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="username">
+                    <i class="fas fa-id-card"></i> Employee ID
+                </label>
+                <input type="text" name="username" class="form-control" required id="username" 
+                       placeholder="Enter your Employee ID" style="text-transform: uppercase;">
+            </div>
+            <div class="form-group">
+                <label for="password">
+                    <i class="fas fa-lock"></i> Password
+                </label>
+                <input type="password" name="password" class="form-control" required id="password" 
+                       placeholder="Enter your password">
+            </div>
+            <button type="submit" class="login-btn">
+                <i class="fas fa-sign-in-alt"></i> Login
+            </button>
+        </form>
     </div>
 </div>
 
 <style>
-    .login-form {
-        max-width: 400px;
-        margin: 0 auto;
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     }
-    
-    .card {
-        border: none;
-        border-radius: 15px;
-        overflow: hidden;
-        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+
+    body {
+        min-height: 100vh;
+        background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
     }
-    
-    .card-header {
-        background: linear-gradient(45deg, var(--primary-color), var(--secondary-color));
-        color: white;
-        padding: 1.5rem;
+
+    .login-container {
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+        position: relative;
     }
-    
-    .card-body {
+
+    .college-name {
+        text-align: center;
+        margin-bottom: 30px;
+    }
+
+    .college-name h1 {
+        color: #2c3e50;
+        font-size: 2.5rem;
+        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+        margin-bottom: 20px;
+    }
+
+    .alert-container {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        z-index: 1000;
+        width: 350px;
+    }
+
+    .alert {
+        padding: 15px;
+        border-radius: 8px;
+        margin-bottom: 10px;
         background: white;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        animation: slideIn 0.3s ease-out;
     }
-    
-    .text-primary {
-        background: linear-gradient(45deg, var(--primary-color), var(--secondary-color));
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
+
+    @keyframes slideIn {
+        from {
+            transform: translateX(100%);
+            opacity: 0;
+        }
+        to {
+            transform: translateX(0);
+            opacity: 1;
+        }
     }
-    
+
+    .alert-success {
+        border-left: 4px solid #2ecc71;
+        color: #27ae60;
+    }
+
+    .alert-error {
+        border-left: 4px solid #e74c3c;
+        color: #c0392b;
+    }
+
+    .alert-warning {
+        border-left: 4px solid #f1c40f;
+        color: #f39c12;
+    }
+
+    .alert-close {
+        background: none;
+        border: none;
+        color: #666;
+        cursor: pointer;
+        padding: 5px;
+        font-size: 16px;
+    }
+
+    .alert-close:hover {
+        color: #333;
+    }
+
+    .login-box {
+        background: white;
+        border-radius: 20px;
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+        padding: 40px;
+        width: 100%;
+        max-width: 400px;
+        position: relative;
+    }
+
+    .login-header {
+        text-align: center;
+        margin-bottom: 30px;
+    }
+
+    .login-header h2 {
+        color: #333;
+        font-size: 24px;
+        margin-bottom: 20px;
+    }
+
+    .avatar-circle {
+        width: 80px;
+        height: 80px;
+        background: #4e73df;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 20px;
+        box-shadow: 0 4px 12px rgba(78, 115, 223, 0.2);
+    }
+
+    .avatar-circle i {
+        font-size: 40px;
+        color: white;
+    }
+
+    .form-group {
+        margin-bottom: 20px;
+    }
+
+    .form-group label {
+        display: block;
+        margin-bottom: 8px;
+        color: #555;
+        font-weight: 500;
+    }
+
+    .form-group label i {
+        margin-right: 8px;
+        color: #4e73df;
+    }
+
     .form-control {
-        border-radius: 10px;
-        padding: 12px;
-        border: 2px solid #e0e0e0;
+        width: 100%;
+        padding: 12px 15px;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        font-size: 14px;
         transition: all 0.3s ease;
     }
-    
+
     .form-control:focus {
-        border-color: var(--primary-color);
-        box-shadow: 0 0 0 0.2rem rgba(78, 84, 200, 0.25);
+        border-color: #4e73df;
+        outline: none;
+        box-shadow: 0 0 0 3px rgba(78, 115, 223, 0.1);
     }
-    
-    .btn-primary {
+
+    .login-btn {
+        width: 100%;
         padding: 12px;
+        background: #4e73df;
+        color: white;
+        border: none;
+        border-radius: 8px;
+        font-size: 16px;
         font-weight: 500;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
     }
-    
-    .form-label {
-        font-weight: 500;
-        color: var(--dark-color);
+
+    .login-btn:hover {
+        background: #2e53bf;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(78, 115, 223, 0.2);
+    }
+
+    .login-btn:active {
+        transform: translateY(0);
+    }
+
+    @media (max-width: 768px) {
+        .college-name h1 {
+            font-size: 2rem;
+        }
+
+        .login-box {
+            padding: 30px 20px;
+        }
+
+        .alert-container {
+            width: calc(100% - 40px);
+            right: 20px;
+        }
     }
 </style>
+
+<script>
+    // Auto-hide alerts after 5 seconds
+    document.addEventListener('DOMContentLoaded', function() {
+        const alerts = document.querySelectorAll('.alert');
+        alerts.forEach(alert => {
+            setTimeout(() => {
+                alert.style.opacity = '0';
+                setTimeout(() => {
+                    alert.style.display = 'none';
+                }, 300);
+            }, 5000);
+        });
+    });
+</script>
 {% endblock %}

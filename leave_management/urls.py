@@ -17,6 +17,8 @@ urlpatterns = [
     path('', views.home, name='home'),
     path('apply-leave/', views.apply_leave, name='apply_leave'),
     path('leave-history/', views.leave_history, name='leave_history'),
+    path('employee-list/', views.employee_list, name='employee_list'),
+    path('employees-on-date/', views.employees_on_date, name='employees_on_date'),
     
     # Admin URLs
     path('admin-home/', views.admin_home, name='admin_home'),
@@ -28,6 +30,7 @@ urlpatterns = [
     path('bulk-register/', views.bulk_register, name='bulk_register'),
     path('download-csv-template/', views.download_csv_template, name='download_csv_template'),
     path('delete-employee/', views.delete_employee, name='delete_employee'),
+    path('todays-leave/', views.todays_leave, name='todays_leave'),
     
     # API endpoints
     path('approve-leave/<int:leave_id>/', views.approve_leave, name='approve_leave'),

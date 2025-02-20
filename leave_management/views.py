@@ -65,7 +65,7 @@ class CustomLoginView(LoginView):
             self._record_failed_attempt(username, role)
             messages.error(self.request, 'Invalid credentials or incorrect role selected')
             return self.form_invalid(form)
-    
+
     def _record_failed_attempt(self, username, role):
         LoginAttempt.objects.create(
             username=username,
@@ -285,6 +285,12 @@ def employee_leave_detail(request, employee_id):
     }
     
     return render(request, 'leave_management/employee_details.html', context)
+
+@login_required
+@user_passes_test(is_admin)
+def employee_list(request):
+    employees = Employee.objects.all()
+    return render(request, 'leave_management/employee_list.html', {'employees': employees})
 
 @login_required
 @user_passes_test(is_admin)
@@ -571,3 +577,19 @@ def download_csv_template(request):
     writer.writerow(['UR01', 'John', 'Doe', 'CSE', 'welcome123'])
     
     return response
+
+@login_required
+@user_passes_test(is_admin)
+def todays_leave(request):
+    today = timezone.now().date()
+    todays_leaves = LeaveRequest.objects.filter(start_date__lte=today, end_date__gte=today, status='APPROVED')
+    return render(request, 'leave_management/todays_leave.html', {'todays_leaves': todays_leaves})
+
+@login_required
+@user_passes_test(is_admin)
+def employees_on_date(request):
+    if request.method == 'POST':
+        selected_date = request.POST.get('date')
+        leaves_on_date = LeaveRequest.objects.filter(start_date__lte=selected_date, end_date__gte=selected_date, status='APPROVED')
+        return render(request, 'leave_management/employees_on_date.html', {'leaves_on_date': leaves_on_date, 'selected_date': selected_date})
+    return render(request, 'leave_management/employees_on_date.html')
