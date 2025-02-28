@@ -136,3 +136,8 @@ LOGOUT_URL = 'logout'
 # https://docs.djangoproject.com/en/5.0/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+AUTHENTICATION_BACKENDS = [
+    'leave_management.auth.CaseInsensitiveAuthBackend',
+    'django.contrib.auth.backends.ModelBackend',  # Keep default backend as fallback
+]

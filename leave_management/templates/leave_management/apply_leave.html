@@ -2,6 +2,174 @@
 {% load crispy_forms_tags %}
 
 {% block content %}
+<style>
+    :root {
+        --primary-color: #6366F1;      /* Indigo */
+        --secondary-color: #4F46E5;    /* Deep Indigo */
+        --accent-color: #3730A3;       /* Royal Indigo */
+        --text-light: #ffffff;
+        --text-dark: #1F2937;
+        --bg-light: #EEF2FF;
+        --bg-dark: #312E81;
+        --success-color: #059669;
+        --danger-color: #DC2626;
+        --warning-color: #FBBF24;
+        --card-bg-opacity: rgba(255, 255, 255, 0.9);
+    }
+
+    .card {
+        background: var(--card-bg-opacity);
+        border: none;
+        border-radius: 1rem;
+        overflow: hidden;
+        transition: all 0.3s ease;
+        opacity: 0;
+        transform: translateY(20px);
+        animation: fadeInUp 0.6s ease forwards;
+        backdrop-filter: blur(10px);
+    }
+
+    .card:hover {
+        transform: translateY(-10px);
+        box-shadow: 0 1rem 3rem rgba(99, 102, 241, 0.15);
+    }
+
+    .card-header {
+        background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+        color: var(--text-light);
+        padding: 1.5rem;
+        border: none;
+    }
+
+    .card-body {
+        padding: 2rem;
+    }
+
+    .form-label {
+        font-weight: 500;
+        color: var(--text-dark);
+        margin-bottom: 0.5rem;
+    }
+
+    .form-control {
+        border-radius: 0.5rem;
+        padding: 0.75rem 1rem;
+        border: 2px solid #e2e8f0;
+        transition: all 0.3s ease;
+    }
+
+    .form-control:focus {
+        border-color: var(--primary-color);
+        box-shadow: 0 0 0 0.2rem rgba(74, 144, 226, 0.25);
+    }
+
+    .btn-primary {
+        background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+        border: none;
+        border-radius: 0.5rem;
+        padding: 0.75rem 1.5rem;
+        font-weight: 500;
+        transition: all 0.3s ease;
+    }
+
+    .btn-primary:hover {
+        background: linear-gradient(135deg, var(--secondary-color), var(--primary-color));
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    }
+
+    .alert {
+        border: none;
+        border-radius: 0.5rem;
+        padding: 1rem;
+        margin-bottom: 1.5rem;
+        animation: slideIn 0.3s ease-out;
+    }
+
+    @keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    @keyframes slideIn {
+        from {
+            opacity: 0;
+            transform: translateX(-20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateX(0);
+        }
+    }
+
+    /* Page loading animation */
+    .page-loader {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(255, 255, 255, 0.8);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 9999;
+        opacity: 1;
+        transition: opacity 0.3s ease;
+    }
+
+    .page-loader.hidden {
+        opacity: 0;
+        pointer-events: none;
+    }
+
+    .spinner {
+        border: 4px solid rgba(0, 0, 0, 0.1);
+        border-left-color: var(--primary-color);
+        border-radius: 50%;
+        width: 40px;
+        height: 40px;
+        animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+    }
+
+    /* Quick Select Radio Buttons Styling */
+    .quick-select {
+        background: linear-gradient(135deg, var(--bg-light), #F5F3FF);
+        padding: 1.5rem;
+        border-radius: 1rem;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+    }
+
+    .form-check {
+        margin-bottom: 0.5rem;
+    }
+
+    .form-check-input:checked {
+        background-color: var(--primary-color);
+        border-color: var(--primary-color);
+    }
+
+    .form-check-label {
+        cursor: pointer;
+    }
+</style>
+
+<div class="page-loader">
+    <div class="spinner"></div>
+</div>
+
 <div class="row justify-content-center">
     <div class="col-md-8">
         <div class="card shadow">
@@ -20,6 +188,21 @@
 
                 <form method="post">
                     {% csrf_token %}
+                    
+                    <div class="mb-3">
+                        <div class="quick-select">
+                            <label class="form-label">Quick Select:</label>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="quick_date" id="today_radio" value="today">
+                                <label class="form-check-label" for="today_radio">Today</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="quick_date" id="tomorrow_radio" value="tomorrow">
+                                <label class="form-check-label" for="tomorrow_radio">Tomorrow</label>
+                            </div>
+                        </div>
+                    </div>
+
                     <div class="mb-3">
                         <label for="id_start_date" class="form-label">Start Date</label>
                         <input type="date" name="start_date" class="form-control" required id="id_start_date" min="{{ today|date:'Y-m-d' }}">
@@ -43,13 +226,50 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    const loader = document.querySelector('.page-loader');
+    if (loader) {
+        loader.classList.add('hidden');
+    }
+
     const disabledDates = JSON.parse('{{ disabled_dates|safe }}');
     const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
     
     const startDateInput = document.getElementById('id_start_date');
     const endDateInput = document.getElementById('id_end_date');
-    
+    const todayRadio = document.getElementById('today_radio');
+    const tomorrowRadio = document.getElementById('tomorrow_radio');
+
+    // Check if current time is after 8:30 AM
+    const currentTime = new Date();
+    const cutoffTime = new Date(today);
+    cutoffTime.setHours(8, 30, 0, 0);
+
+    if (currentTime > cutoffTime) {
+        todayRadio.disabled = true;
+        todayRadio.parentElement.style.opacity = '0.5';
+    }
+
+    function formatDate(date) {
+        return date.toISOString().split('T')[0];
+    }
+
+    // Handle radio button changes
+    todayRadio.addEventListener('change', function() {
+        if (this.checked) {
+            startDateInput.value = formatDate(today);
+            endDateInput.value = formatDate(today);
+        }
+    });
+
+    tomorrowRadio.addEventListener('change', function() {
+        if (this.checked) {
+            startDateInput.value = formatDate(tomorrow);
+            endDateInput.value = formatDate(tomorrow);
+        }
+    });
+
     function isDateDisabled(date) {
         const dateStr = date.toISOString().split('T')[0];
         return disabledDates.includes(dateStr) || date <= today;
@@ -58,6 +278,10 @@ document.addEventListener('DOMContentLoaded', function() {
     startDateInput.addEventListener('change', function() {
         const startDate = new Date(this.value);
         endDateInput.min = this.value;
+        
+        // Uncheck radio buttons when manual date is selected
+        todayRadio.checked = false;
+        tomorrowRadio.checked = false;
         
         if (isDateDisabled(startDate)) {
             this.value = '';

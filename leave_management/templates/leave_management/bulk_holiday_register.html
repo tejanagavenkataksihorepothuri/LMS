@@ -1,0 +1,51 @@
+{% extends 'leave_management/base.html' %}
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="mb-0">Bulk Holiday Registration</h4>
+                </div>
+                <div class="card-body">
+                    {% if messages %}
+                        {% for message in messages %}
+                            <div class="alert alert-{{ message.tags }}">
+                                {{ message }}
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+                    
+                    <div class="mb-4">
+                        <h5>Instructions:</h5>
+                        <ol>
+                            <li>Download the CSV template below</li>
+                            <li>Fill in the holiday details in the CSV file</li>
+                            <li>Upload the completed CSV file</li>
+                        </ol>
+                        <a href="{% url 'download_holiday_csv_template' %}" class="btn btn-secondary">
+                            <i class="fas fa-download"></i> Download CSV Template
+                        </a>
+                    </div>
+
+                    <form method="post" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        <div class="form-group mb-3">
+                            <label for="csv_file">Upload CSV File</label>
+                            <input type="file" class="form-control" id="csv_file" name="csv_file" accept=".csv" required>
+                        </div>
+                        <div class="mt-3">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-upload"></i> Upload and Process
+                            </button>
+                            <a href="{% url 'manage_holidays' %}" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left"></i> Back to Holidays
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

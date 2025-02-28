@@ -2,45 +2,79 @@
 
 {% block content %}
 <div class="container mt-4">
-    <h2>Employees on Leave</h2>
-    <form method="post">
-        {% csrf_token %}
-        <div class="form-group">
-            <label for="date">Select Date:</label>
-            <input type="date" class="form-control" id="date" name="date" required>
+    <div class="card shadow">
+        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">Employees on Leave</h5>
         </div>
-        <button type="submit" class="btn btn-primary mt-2">Submit</button>
-    </form>
-    {% if selected_date %}
-    <h4 class="mt-4">Leaves on {{ selected_date }}</h4>
-    <table class="table table-striped">
-        <thead>
-            <tr>
-                <th>Employee ID</th>
-                <th>Name</th>
-                <th>Department</th>
-                <th>Leave Type</th>
-                <th>Start Date</th>
-                <th>End Date</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for leave in leaves_on_date %}
-            <tr>
-                <td>{{ leave.employee.id }}</td>
-                <td>{{ leave.employee.name }}</td>
-                <td>{{ leave.employee.department }}</td>
-                <td>{{ leave.leave_type }}</td>
-                <td>{{ leave.start_date }}</td>
-                <td>{{ leave.end_date }}</td>
-            </tr>
-            {% empty %}
-            <tr>
-                <td colspan="6">No employees on leave on this date.</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-    {% endif %}
+        <div class="card-body">
+            <form method="post" class="mb-4">
+                {% csrf_token %}
+                <div class="row align-items-end">
+                    <div class="col-md-4">
+                        <label class="form-label">Select Date</label>
+                        <input type="date" name="date" class="form-control" required 
+                               value="{{ selected_date|default:'' }}">
+                    </div>
+                    <div class="col-md-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-search me-2"></i>Search
+                        </button>
+                    </div>
+                </div>
+            </form>
+
+            {% if selected_date %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>Employee ID</th>
+                            <th>Name</th>
+                            <th>Department</th>
+                            <th>Leave Type</th>
+                            <th>Start Date</th>
+                            <th>End Date</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for leave in leaves_on_date %}
+                        <tr>
+                            <td>{{ leave.employee.employee_id }}</td>
+                            <td>{{ leave.employee.get_full_name }}</td>
+                            <td>{{ leave.employee.get_department_display }}</td>
+                            <td>{{ leave.get_leave_type_display }}</td>
+                            <td>{{ leave.start_date }}</td>
+                            <td>{{ leave.end_date }}</td>
+                            <td>
+                                <span class="badge {% if leave.status == 'APPROVED' %}bg-success{% elif leave.status == 'REJECTED' %}bg-danger{% else %}bg-warning{% endif %}">
+                                    {{ leave.status }}
+                                </span>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="7" class="text-center">No employees on leave for selected date</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% endif %}
+        </div>
+    </div>
 </div>
+
+<style>
+    .card {
+        border: none;
+        border-radius: 10px;
+    }
+    .table th {
+        font-weight: 600;
+    }
+    .badge {
+        padding: 0.5em 1em;
+    }
+</style>
 {% endblock %}

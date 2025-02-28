@@ -1,0 +1,78 @@
+{% extends 'leave_management/base.html' %}
+{% block content %}
+<div class="container mt-4">
+    <div class="card shadow">
+        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+            <h4 class="mb-0">My Attendance</h4>
+            <div>
+                <a href="?export=true&format=excel&month={{ current_month }}&year={{ current_year }}" class="btn btn-light me-2">
+                    <i class="fas fa-file-excel"></i> Export to Excel
+                </a>
+                <a href="?export=true&format=pdf&month={{ current_month }}&year={{ current_year }}" class="btn btn-light">
+                    <i class="fas fa-file-pdf"></i> Export to PDF
+                </a>
+            </div>
+        </div>
+        <div class="card-body">
+            <!-- Filter Form -->
+            <form method="get" class="mb-4">
+                <div class="row">
+                    <div class="col-md-4">
+                        <label for="month" class="form-label">Month</label>
+                        <select name="month" id="month" class="form-select">
+                            {% for month_num, month_name in months %}
+                                <option value="{{ month_num }}" {% if month_num == current_month %}selected{% endif %}>
+                                    {{ month_name }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label for="year" class="form-label">Year</label>
+                        <select name="year" id="year" class="form-select">
+                            {% for y in years %}
+                                <option value="{{ y }}" {% if y == current_year %}selected{% endif %}>
+                                    {{ y }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-4 d-flex align-items-end">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-filter"></i> Filter
+                        </button>
+                    </div>
+                </div>
+            </form>
+
+            <!-- Attendance Table -->
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Date</th>
+                            <th>Check-in Time</th>
+                            <th>Check-out Time</th>
+                            <th>Duration</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for record in attendance_records %}
+                        <tr>
+                            <td>{{ record.date|date:"d M, Y" }}</td>
+                            <td>{{ record.check_in_time|time:"H:i"|default:"--" }}</td>
+                            <td>{{ record.check_out_time|time:"H:i"|default:"--" }}</td>
+                            <td>{{ record.get_duration|default:"--" }} hours</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="4" class="text-center">No attendance records found for the selected period.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

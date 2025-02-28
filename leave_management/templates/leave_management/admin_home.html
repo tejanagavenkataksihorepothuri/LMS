@@ -1,59 +1,133 @@
 {% extends 'leave_management/base.html' %}
 
 {% block content %}
-<div class="welcome-text mb-5 text-center">Welcome {{ user.get_full_name|default:user.username }} to Leave Management System</div>
+<div class="content-card bg-transparent">
+    <div class="header text-center">
+        <h3 class="mb-4 text-white">Welcome {{ user.get_full_name|default:user.username }}</h3>
+    </div>
 
-<div class="row justify-content-center">
-    <div class="col-md-4 mb-4">
-        <div class="card text-center shadow-sm" style="background-color: #e3f2fd;">
-            <div class="card-body">
-                <i class="fas fa-clipboard-list fa-3x mb-3 text-info"></i>
-                <h5 class="card-title">Pending Leaves</h5>
-                <p class="card-text">Manage pending leave requests</p>
-                <a href="{% url 'leave_applications' %}" class="btn btn-custom">View Applications</a>
+    <div class="row g-4">
+        <div class="col-md-4">
+            <div class="feature-card pending">
+                <div class="card-body text-center">
+                    <i class="fas fa-clipboard-list fa-3x mb-3"></i>
+                    <h5 class="card-title">Pending Leaves</h5>
+                    <p class="card-text">Manage pending leave requests</p>
+                    <a href="{% url 'leave_applications' %}" class="btn btn-custom">View Applications</a>
+                </div>
             </div>
         </div>
-    </div>
-    <div class="col-md-4 mb-4">
-        <div class="card text-center shadow-sm" style="background-color: #f3e5f5;">
-            <div class="card-body">
-                <i class="fas fa-users fa-3x mb-3 text-info"></i>
-                <h5 class="card-title">Total Employees</h5>
-                <p class="card-text">View all employee details</p>
-                <a href="{% url 'employee_list' %}" class="btn btn-custom">View Employees</a>
+        
+        <div class="col-md-4">
+            <div class="feature-card employees">
+                <div class="card-body text-center">
+                    <i class="fas fa-users fa-3x mb-3"></i>
+                    <h5 class="card-title">Total Employees</h5>
+                    <p class="card-text">View all employee details</p>
+                    <a href="{% url 'employee_list' %}" class="btn btn-custom">View Employees</a>
+                </div>
             </div>
         </div>
-    </div>
-    <div class="col-md-4 mb-4">
-        <div class="card text-center shadow-sm" style="background-color: #fff3e0;">
-            <div class="card-body">
-                <i class="fas fa-calendar-day fa-3x mb-3 text-info"></i>
-                <h5 class="card-title">Today's Leave</h5>
-                <p class="card-text">Employees on leave today</p>
-                <a href="{% url 'todays_leave' %}" class="btn btn-custom">View Today's Leaves</a>
+        
+        <div class="col-md-4">
+            <div class="feature-card today">
+                <div class="card-body text-center">
+                    <i class="fas fa-calendar-day fa-3x mb-3"></i>
+                    <h5 class="card-title">Today's Leave</h5>
+                    <p class="card-text">Employees on leave today</p>
+                    <a href="{% url 'todays_leave' %}" class="btn btn-custom">View Today's Leaves</a>
+                </div>
             </div>
         </div>
-    </div>
-    <div class="col-md-4 mb-4">
-        <div class="card text-center shadow-sm" style="background-color: #e8f5e9;">
-            <div class="card-body">
-                <i class="fas fa-history fa-3x mb-3 text-success"></i>
-                <h5 class="card-title">Leave History</h5>
-                <p class="card-text">View leave history of all employees</p>
-                <a href="{% url 'employee_leave_history' %}" class="btn btn-custom">View History</a>
+        
+        <div class="col-md-4">
+            <div class="feature-card history">
+                <div class="card-body text-center">
+                    <i class="fas fa-history fa-3x mb-3"></i>
+                    <h5 class="card-title">Leave History</h5>
+                    <p class="card-text">View leave history of all employees</p>
+                    <a href="{% url 'employee_leave_history' %}" class="btn btn-custom">View History</a>
+                </div>
             </div>
         </div>
-    </div>
-    <div class="col-md-4 mb-4">
-        <div class="card text-center shadow-sm" style="background-color: #d1c4e9;">
-            <div class="card-body">
-                <i class="fas fa-calendar-alt fa-3x mb-3 text-primary"></i>
-                <h5 class="card-title">Leave on Date</h5>
-                <p class="card-text">View employees on leave on specific date</p>
-                <a href="{% url 'employees_on_date' %}" class="btn btn-custom">View Employees</a>
+        
+        <div class="col-md-4">
+            <div class="feature-card date">
+                <div class="card-body text-center">
+                    <i class="fas fa-calendar-alt fa-3x mb-3"></i>
+                    <h5 class="card-title">Leave on Date</h5>
+                    <p class="card-text">View employees on leave on specific date</p>
+                    <a href="{% url 'employees_on_date' %}" class="btn btn-custom">View Employees</a>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="feature-card holidays">
+                <div class="card-body text-center">
+                    <i class="fas fa-calendar-alt fa-3x mb-3"></i>
+                    <h5 class="card-title">Manage Holidays</h5>
+                    <p class="card-text">Add and manage holiday calendar</p>
+                    <a href="{% url 'manage_holidays' %}" class="btn btn-custom">Manage Holidays</a>
+                </div>
             </div>
         </div>
     </div>
 </div>
 
+<style>
+.content-card {
+    padding: 2rem;
+    border-radius: 15px;
+    backdrop-filter: blur(10px);
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.feature-card {
+    padding: 1.5rem;
+    border-radius: 15px;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.feature-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+}
+
+.feature-card.pending { background: linear-gradient(135deg, #FF8C42, #E84A5F); }
+.feature-card.employees { background: linear-gradient(135deg, #6366F1, #4F46E5); }
+.feature-card.today { background: linear-gradient(135deg, #10B981, #059669); }
+.feature-card.history { background: linear-gradient(135deg, #8B5CF6, #7C3AED); }
+.feature-card.date { background: linear-gradient(135deg, #F59E0B, #D97706); }
+.feature-card.holidays { background: linear-gradient(135deg, #EC4899, #DB2777); }
+
+.feature-card .card-body {
+    color: white;
+}
+
+.feature-card i {
+    opacity: 0.9;
+    transition: transform 0.3s ease;
+}
+
+.feature-card:hover i {
+    transform: scale(1.1);
+}
+
+.btn-custom {
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+    border: 2px solid rgba(255, 255, 255, 0.4);
+    padding: 8px 20px;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+}
+
+.btn-custom:hover {
+    background: rgba(255, 255, 255, 0.3);
+    color: white;
+    transform: translateY(-2px);
+}
+</style>
 {% endblock %}

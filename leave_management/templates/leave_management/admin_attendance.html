@@ -1,0 +1,117 @@
+{% extends 'leave_management/base.html' %}
+{% block content %}
+<div class="container mt-4">
+    <div class="card shadow">
+        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+            <h4 class="mb-0">Attendance Management</h4>
+            <div>
+                <a href="?export=true&format=excel{% if employee_id %}&employee_id={{ employee_id }}{% endif %}{% if start_date %}&start_date={{ start_date }}{% endif %}{% if end_date %}&end_date={{ end_date }}{% endif %}" class="btn btn-light me-2">
+                    <i class="fas fa-file-excel"></i> Export to Excel
+                </a>
+                <a href="?export=true&format=pdf{% if employee_id %}&employee_id={{ employee_id }}{% endif %}{% if start_date %}&start_date={{ start_date }}{% endif %}{% if end_date %}&end_date={{ end_date }}{% endif %}" class="btn btn-light">
+                    <i class="fas fa-file-pdf"></i> Export to PDF
+                </a>
+            </div>
+        </div>
+        <div class="card-body">
+            <!-- Filter Form -->
+            <form method="get" class="mb-4">
+                <div class="row">
+                    <div class="col-md-4">
+                        <label for="employee_id" class="form-label">Employee ID</label>
+                        <input type="text" class="form-control" id="employee_id" name="employee_id" value="{{ employee_id }}" placeholder="Enter Employee ID">
+                    </div>
+                    <div class="col-md-3">
+                        <label for="start_date" class="form-label">Start Date</label>
+                        <input type="date" class="form-control" id="start_date" name="start_date" value="{{ start_date }}">
+                    </div>
+                    <div class="col-md-3">
+                        <label for="end_date" class="form-label">End Date</label>
+                        <input type="date" class="form-control" id="end_date" name="end_date" value="{{ end_date }}">
+                    </div>
+                    <div class="col-md-2 d-flex align-items-end">
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="fas fa-filter"></i> Filter
+                        </button>
+                    </div>
+                </div>
+            </form>
+
+            <!-- Attendance Table -->
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Employee ID</th>
+                            <th>Name</th>
+                            <th>Date</th>
+                            <th>Check-in Time</th>
+                            <th>Check-out Time</th>
+                            <th>Duration</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for record in attendance_records %}
+                        <tr>
+                            <td>{{ record.employee.employee_id }}</td>
+                            <td>{{ record.employee.get_full_name }}</td>
+                            <td>{{ record.date|date:"d M, Y" }}</td>
+                            <td>{{ record.check_in_time|time:"H:i"|default:"--" }}</td>
+                            <td>{{ record.check_out_time|time:"H:i"|default:"--" }}</td>
+                            <td>{{ record.get_duration|default:"--" }} hours</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="6" class="text-center">No attendance records found.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Pagination -->
+            {% if attendance_records.paginator.num_pages > 1 %}
+            <nav aria-label="Page navigation" class="mt-4">
+                <ul class="pagination justify-content-center">
+                    {% if attendance_records.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page=1{% if employee_id %}&employee_id={{ employee_id }}{% endif %}{% if start_date %}&start_date={{ start_date }}{% endif %}{% if end_date %}&end_date={{ end_date }}{% endif %}" aria-label="First">
+                            <span aria-hidden="true">&laquo;&laquo;</span>
+                        </a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ attendance_records.previous_page_number }}{% if employee_id %}&employee_id={{ employee_id }}{% endif %}{% if start_date %}&start_date={{ start_date }}{% endif %}{% if end_date %}&end_date={{ end_date }}{% endif %}" aria-label="Previous">
+                            <span aria-hidden="true">&laquo;</span>
+                        </a>
+                    </li>
+                    {% endif %}
+
+                    {% for num in attendance_records.paginator.page_range %}
+                        {% if attendance_records.number == num %}
+                            <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+                        {% elif num > attendance_records.number|add:'-3' and num < attendance_records.number|add:'3' %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ num }}{% if employee_id %}&employee_id={{ employee_id }}{% endif %}{% if start_date %}&start_date={{ start_date }}{% endif %}{% if end_date %}&end_date={{ end_date }}{% endif %}">{{ num }}</a>
+                            </li>
+                        {% endif %}
+                    {% endfor %}
+
+                    {% if attendance_records.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ attendance_records.next_page_number }}{% if employee_id %}&employee_id={{ employee_id }}{% endif %}{% if start_date %}&start_date={{ start_date }}{% endif %}{% if end_date %}&end_date={{ end_date }}{% endif %}" aria-label="Next">
+                            <span aria-hidden="true">&raquo;</span>
+                        </a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ attendance_records.paginator.num_pages }}{% if employee_id %}&employee_id={{ employee_id }}{% endif %}{% if start_date %}&start_date={{ start_date }}{% endif %}{% if end_date %}&end_date={{ end_date }}{% endif %}" aria-label="Last">
+                            <span aria-hidden="true">&raquo;&raquo;</span>
+                        </a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
