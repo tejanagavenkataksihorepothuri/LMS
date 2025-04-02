@@ -1,14 +1,62 @@
 <!DOCTYPE html>
 <html>
 <head>
+    <meta charset="UTF-8">
+    <title>Employee List</title>
     <style>
-        table { width: 100%; border-collapse: collapse; }
-        th, td { border: 1px solid black; padding: 8px; text-align: left; }
-        th { background-color: #f2f2f2; }
+        @page {
+            size: A4;
+            margin: 2cm;
+        }
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.4;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .header h2 {
+            color: #333;
+            margin: 0;
+            padding: 10px 0;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 12px 8px;
+            text-align: left;
+            font-size: 14px;
+        }
+        th {
+            background-color: #f5f5f5;
+            color: #333;
+            font-weight: bold;
+        }
+        tr:nth-child(even) {
+            background-color: #fafafa;
+        }
+        .footer {
+            position: fixed;
+            bottom: 0;
+            width: 100%;
+            text-align: center;
+            font-size: 12px;
+            color: #666;
+            padding: 10px 0;
+        }
     </style>
 </head>
 <body>
-    <h2>Employee List</h2>
+    <div class="header">
+        <h2>Employee List</h2>
+        <p>Generated on: {% now "F d, Y" %}</p>
+    </div>
+
     <table>
         <thead>
             <tr>
@@ -16,18 +64,25 @@
                 <th>Name</th>
                 <th>Department</th>
                 <th>Phone</th>
+                <th>Experience</th>
             </tr>
         </thead>
         <tbody>
-            {% for employee in employees %}
+            {% for emp in employees %}
             <tr>
-                <td>{{ employee.employee_id }}</td>
-                <td>{{ employee.get_full_name }}</td>
-                <td>{{ employee.get_department_display }}</td>
-                <td>{{ employee.phone_number|default:'-' }}</td>
+                <td>{{ emp.employee.employee_id }}</td>
+                <td>{{ emp.employee.get_full_name }}</td>
+                <td>{{ emp.employee.get_department_display }}</td>
+                <td>{{ emp.employee.phone_number|default:'-' }}</td>
+                <td>{{ emp.experience }}</td>
             </tr>
             {% endfor %}
         </tbody>
     </table>
+
+    <div class="footer">
+        <p>Leave Management System - Employee List Report</p>
+        <p>Page <pdf:pagenumber> of <pdf:pagecount></p>
+    </div>
 </body>
 </html> 

@@ -3,11 +3,12 @@ from . import views
 from django.contrib.auth.views import LogoutView
 from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import csrf_protect
+from .views import cancel_leave
 
 urlpatterns = [
     # Authentication URLs
     path('login/', views.CustomLoginView.as_view(), name='login'),
-    path('logout/', LogoutView.as_view(next_page='login'), name='logout'),
+    path('logout/', views.logout_view, name='logout'),
     path('change-password/', views.ChangePasswordView.as_view(), name='change_password'),
     
     # Notifications URLs
@@ -21,6 +22,7 @@ urlpatterns = [
     path('leave-history/', views.leave_history, name='leave_history'),
     path('employee-list/', views.employee_list, name='employee_list'),
     path('employees-on-date/', views.employees_on_date, name='employees_on_date'),
+    path('my-compensatory-leaves/', views.my_compensatory_leaves, name='my_compensatory_leaves'),
     
     # Admin URLs
     path('admin-home/', views.admin_home, name='admin_home'),
@@ -32,6 +34,7 @@ urlpatterns = [
     path('bulk-register/', views.bulk_register, name='bulk_register'),
     path('download-csv-template/', views.download_csv_template, name='download_csv_template'),
     path('delete-employee/', views.delete_employee, name='delete_employee'),
+    path('bulk-delete-employees/', views.bulk_delete_employees, name='bulk_delete_employees'),
     path('todays-leave/', views.todays_leave, name='todays_leave'),
     path('admin-change-password/', views.admin_change_user_password, name='admin_change_user_password'),
     path('bulk-holiday-register/', views.bulk_holiday_register, name='bulk_holiday_register'),
@@ -46,4 +49,8 @@ urlpatterns = [
     path('reject-leave/<int:leave_id>/', views.reject_leave, name='reject_leave'),
     path('manage-holidays/', views.manage_holidays, name='manage_holidays'),
     path('delete-holiday/<int:holiday_id>/', views.delete_holiday, name='delete_holiday'),
+    path('compensatory-leave/', views.manage_compensatory_leave, name='manage_compensatory_leave'),
+    path('compensatory-leave/delete/<int:comp_leave_id>/', views.delete_compensatory_leave, name='delete_compensatory_leave'),
+    path('reports/', views.reports, name='reports'),
+    path('cancel-leave/<int:leave_id>/', cancel_leave, name='cancel_leave'),
 ]

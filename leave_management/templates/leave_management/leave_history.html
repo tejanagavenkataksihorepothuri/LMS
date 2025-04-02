@@ -51,13 +51,14 @@
                                 <th>Reason</th>
                                 <th>Status</th>
                                 <th>Applied On</th>
+                                <th>Actions</th>
                             </tr>
                         </thead>
                         <tbody>
                             {% for leave in leaves %}
                             <tr>
-                                <td>{{ leave.start_date }}</td>
-                                <td>{{ leave.end_date }}</td>
+                                <td>{{ leave.start_date|date:"M d, Y" }}</td>
+                                <td>{{ leave.end_date|date:"M d, Y" }}</td>
                                 <td>{{ leave.number_of_days }}</td>
                                 <td>
                                     {% if leave.start_date.month == 5 %}
@@ -71,19 +72,71 @@
                                 <td>{{ leave.reason }}</td>
                                 <td>
                                     <span class="badge {% if leave.status == 'APPROVED' %}bg-success{% elif leave.status == 'REJECTED' %}bg-danger{% else %}bg-warning{% endif %}">
-                                        {{ leave.status }}
+                                        {{ leave.get_status_display }}
                                     </span>
                                 </td>
                                 <td>{{ leave.created_at|date:"M d, Y" }}</td>
+                                <td>
+                                    {% if leave.status == 'PENDING' and leave.start_date > today %}
+                                    <form method="post" action="{% url 'cancel_leave' leave.id %}" style="display: inline;">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Are you sure you want to cancel this leave request?')">
+                                            <i class="fas fa-times"></i> Cancel
+                                        </button>
+                                    </form>
+                                    {% endif %}
+                                </td>
                             </tr>
                             {% empty %}
                             <tr>
-                                <td colspan="7" class="text-center">No leave requests found.</td>
+                                <td colspan="8" class="text-center">No leave requests found.</td>
                             </tr>
                             {% endfor %}
                         </tbody>
                     </table>
                 </div>
+                
+                {% if leaves.has_other_pages %}
+                <nav aria-label="Page navigation" class="mt-4">
+                    <ul class="pagination justify-content-center">
+                        {% if leaves.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ leaves.previous_page_number }}" aria-label="Previous">
+                                <span aria-hidden="true">&laquo;</span>
+                            </a>
+                        </li>
+                        {% else %}
+                        <li class="page-item disabled">
+                            <span class="page-link" aria-hidden="true">&laquo;</span>
+                        </li>
+                        {% endif %}
+                        
+                        {% for num in leaves.paginator.page_range %}
+                            {% if leaves.number == num %}
+                            <li class="page-item active">
+                                <span class="page-link">{{ num }}</span>
+                            </li>
+                            {% else %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ num }}">{{ num }}</a>
+                            </li>
+                            {% endif %}
+                        {% endfor %}
+                        
+                        {% if leaves.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ leaves.next_page_number }}" aria-label="Next">
+                                <span aria-hidden="true">&raquo;</span>
+                            </a>
+                        </li>
+                        {% else %}
+                        <li class="page-item disabled">
+                            <span class="page-link" aria-hidden="true">&raquo;</span>
+                        </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+                {% endif %}
             </div>
         </div>
     </div>
@@ -93,30 +146,32 @@
     <div class="col-md-12">
         <div class="card shadow">
             <div class="card-header">
-                <h4 class="mb-0">Monthly Leave Summary ({{ user.get_academic_year }}-{{ user.get_academic_year|add:"1" }} Academic Year)</h4>
+                <h4 class="mb-0">Monthly Leave Summary ({{ current_year }})</h4>
             </div>
             <div class="card-body">
                 <div class="table-responsive">
                     <table class="table table-hover">
                         <thead>
                             <tr>
-                                <th>Month/Year</th>
+                                <th>Month</th>
                                 <th>Casual Leaves</th>
                                 <th>Extra Leaves</th>
                                 <th>Summer Leaves</th>
+                                <th>Total</th>
                             </tr>
                         </thead>
                         <tbody>
                             {% for history in monthly_history %}
                             <tr>
-                                <td>{{ history.month }}/{{ history.year }}</td>
+                                <td>{{ history.month }}</td>
                                 <td>{{ history.casual_leaves_taken }}</td>
                                 <td>{{ history.extra_leaves_taken }}</td>
                                 <td>{{ history.summer_leaves_taken }}</td>
+                                <td>{{ history.casual_leaves_taken|add:history.extra_leaves_taken|add:history.summer_leaves_taken }}</td>
                             </tr>
                             {% empty %}
                             <tr>
-                                <td colspan="4" class="text-center">No leave history found.</td>
+                                <td colspan="5" class="text-center">No leave history found.</td>
                             </tr>
                             {% endfor %}
                         </tbody>

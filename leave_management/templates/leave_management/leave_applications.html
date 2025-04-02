@@ -21,7 +21,7 @@
                     </tr>
                 </thead>
                 <tbody>
-                    {% for leave in leaves %}
+                    {% for leave in leave_requests %}
                     <tr>
                         <td>{{ leave.employee.employee_id }}</td>
                         <td>{{ leave.employee.get_full_name }}</td>
@@ -49,6 +49,48 @@
                 </tbody>
             </table>
         </div>
+        
+        {% if leave_requests.has_other_pages %}
+        <nav aria-label="Page navigation" class="mt-4">
+            <ul class="pagination justify-content-center">
+                {% if leave_requests.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ leave_requests.previous_page_number }}" aria-label="Previous">
+                        <span aria-hidden="true">&laquo;</span>
+                    </a>
+                </li>
+                {% else %}
+                <li class="page-item disabled">
+                    <span class="page-link" aria-hidden="true">&laquo;</span>
+                </li>
+                {% endif %}
+                
+                {% for num in leave_requests.paginator.page_range %}
+                    {% if leave_requests.number == num %}
+                    <li class="page-item active">
+                        <span class="page-link">{{ num }}</span>
+                    </li>
+                    {% else %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ num }}">{{ num }}</a>
+                    </li>
+                    {% endif %}
+                {% endfor %}
+                
+                {% if leave_requests.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ leave_requests.next_page_number }}" aria-label="Next">
+                        <span aria-hidden="true">&raquo;</span>
+                    </a>
+                </li>
+                {% else %}
+                <li class="page-item disabled">
+                    <span class="page-link" aria-hidden="true">&raquo;</span>
+                </li>
+                {% endif %}
+            </ul>
+        </nav>
+        {% endif %}
     </div>
 </div>
 {% endblock %}

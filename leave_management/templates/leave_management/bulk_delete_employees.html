@@ -1,0 +1,65 @@
+{% extends 'leave_management/base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="card">
+        <div class="card-header bg-danger text-white">
+            <h5 class="mb-0"><i class="fas fa-trash me-2"></i>Bulk Delete Employees</h5>
+        </div>
+        <div class="card-body">
+            <div class="alert alert-warning">
+                <i class="fas fa-exclamation-triangle me-2"></i>
+                <strong>Warning:</strong> This action cannot be undone. Please be careful when selecting employees to delete.
+            </div>
+            
+            <form method="post" id="bulkDeleteForm">
+                {% csrf_token %}
+                <div class="mb-3">
+                    <label for="employeeSelect" class="form-label">Select Employees to Delete</label>
+                    <select multiple class="form-select" id="employeeSelect" name="employee_ids" size="10" required>
+                        {% for employee in employees %}
+                            {% if not employee.is_admin %}
+                                <option value="{{ employee.employee_id }}">
+                                    {{ employee.employee_id }} - {{ employee.get_full_name }} ({{ employee.get_department_display }})
+                                </option>
+                            {% endif %}
+                        {% endfor %}
+                    </select>
+                    <div class="form-text">Hold Ctrl (Windows) or Command (Mac) to select multiple employees</div>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="password" class="form-label">Admin Password</label>
+                    <input type="password" class="form-control" id="password" name="password" required>
+                </div>
+                
+                <div class="d-flex justify-content-between">
+                    <a href="{% url 'employee_list' %}" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left me-2"></i>Back
+                    </a>
+                    <button type="submit" class="btn btn-danger" onclick="return confirmDelete()">
+                        <i class="fas fa-trash me-2"></i>Delete Selected Employees
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function confirmDelete() {
+    var select = document.getElementById('employeeSelect');
+    var selectedCount = select.selectedOptions.length;
+    
+    if (selectedCount === 0) {
+        alert('Please select at least one employee to delete');
+        return false;
+    }
+    
+    return confirm(`Are you sure you want to delete ${selectedCount} employee(s)? This action cannot be undone.`);
+}
+</script>
+{% endblock %} 

@@ -1,0 +1,300 @@
+{% extends 'leave_management/base.html' %}
+
+{% block styles %}
+<style>
+    .card {
+        box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        border: none;
+        margin-bottom: 20px;
+        border-radius: 8px;
+    }
+    
+    .card-header {
+        background-color: #6610f2;
+        color: white;
+        padding: 15px 20px;
+        border-radius: 8px 8px 0 0;
+    }
+    
+    .form-label {
+        font-weight: 500;
+        color: #344767;
+        margin-bottom: 8px;
+    }
+    
+    .form-select, .form-control {
+        border-radius: 6px;
+        padding: 10px;
+        border: 1px solid #ced4da;
+        display: block !important;
+        width: 100% !important;
+    }
+    
+    .form-select:focus, .form-control:focus {
+        border-color: #6610f2;
+        box-shadow: 0 0 0 0.25rem rgba(102, 16, 242, 0.25);
+    }
+    
+    .info-text {
+        margin-top: 5px;
+        font-size: 0.875rem;
+        color: #6c757d;
+    }
+    
+    .btn-primary {
+        background-color: #6610f2;
+        border-color: #6610f2;
+        padding: 10px 20px;
+    }
+    
+    .btn-primary:hover {
+        background-color: #520dc2;
+        border-color: #520dc2;
+    }
+
+    /* Field visibility styles */
+    .field-container {
+        opacity: 0;
+        height: 0;
+        overflow: hidden;
+        transition: all 0.3s ease-in-out;
+    }
+
+    .field-container.visible {
+        opacity: 1;
+        height: auto;
+        margin-bottom: 1rem;
+    }
+
+    /* Select2-like styling for dropdowns */
+    .form-select {
+        appearance: none;
+        background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23343a40' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M2 5l6 6 6-6'/%3e%3c/svg%3e");
+        background-repeat: no-repeat;
+        background-position: right 0.75rem center;
+        background-size: 16px 12px;
+    }
+
+    .form-select option {
+        padding: 10px;
+    }
+
+    /* Animation for field transitions */
+    @keyframes slideDown {
+        from {
+            opacity: 0;
+            transform: translateY(-10px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .field-container.visible {
+        animation: slideDown 0.3s ease-out;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <!-- Grant Form -->
+    <div class="card">
+        <div class="card-header">
+            <h5 class="mb-0">Grant Compensatory Leave</h5>
+        </div>
+        <div class="card-body">
+            <form method="post" class="needs-validation" novalidate>
+                {% csrf_token %}
+                
+                <!-- Grant Type -->
+                <div class="mb-3">
+                    <label for="grantType" class="form-label">Grant Type</label>
+                    <select class="form-select" id="grantType" name="grant_type" required>
+                        <option value="">Select Type</option>
+                        <option value="INDIVIDUAL">Individual Employee</option>
+                        <option value="DEPARTMENT">Entire Department</option>
+                    </select>
+                    <div class="invalid-feedback">Please select a grant type.</div>
+                </div>
+
+                <!-- Employee Selection -->
+                <div class="mb-3 field-container" id="employeeField">
+                    <label for="employeeSelect" class="form-label">Select Employee</label>
+                    <select class="form-select" id="employeeSelect" name="employee_id">
+                        <option value="">Select an employee...</option>
+                        {% for employee in employees %}
+                        <option value="{{ employee.employee_id }}">
+                            {{ employee.get_full_name }} ({{ employee.employee_id }}) - {{ employee.get_department_display }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                    <div class="invalid-feedback">Please select an employee.</div>
+                    <div id="employeeInfo" class="info-text"></div>
+                </div>
+
+                <!-- Department Selection -->
+                <div class="mb-3 field-container" id="departmentField">
+                    <label for="departmentSelect" class="form-label">Select Department</label>
+                    <select class="form-select" id="departmentSelect" name="department">
+                        <option value="">Select a department...</option>
+                        {% for code, name in departments.items %}
+                        <option value="{{ code }}">{{ name }}</option>
+                        {% endfor %}
+                    </select>
+                    <div class="invalid-feedback">Please select a department.</div>
+                    <div id="departmentInfo" class="info-text"></div>
+                </div>
+
+                <!-- Number of Days -->
+                <div class="mb-3">
+                    <label for="numberOfDays" class="form-label">Number of Days</label>
+                    <input type="number" class="form-control" id="numberOfDays" name="number_of_days" min="1" required>
+                    <div class="invalid-feedback">Please enter the number of days.</div>
+                </div>
+
+                <!-- Reason -->
+                <div class="mb-3">
+                    <label for="reason" class="form-label">Reason</label>
+                    <textarea class="form-control" id="reason" name="reason" rows="3" required></textarea>
+                    <div class="invalid-feedback">Please provide a reason.</div>
+                </div>
+
+                <button type="submit" class="btn btn-primary">Grant Leave</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- History Table -->
+    <div class="card">
+        <div class="card-header">
+            <h5 class="mb-0">Compensatory Leave History</h5>
+        </div>
+        <div class="card-body">
+            {% if comp_leaves %}
+            <div class="table-responsive">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Type</th>
+                            <th>Employee/Department</th>
+                            <th>Days</th>
+                            <th>Reason</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for leave in comp_leaves %}
+                        <tr>
+                            <td>{{ leave.granted_date|date:"Y-m-d" }}</td>
+                            <td>{{ leave.grant_type }}</td>
+                            <td>
+                                {% if leave.grant_type == 'INDIVIDUAL' %}
+                                    {{ leave.employee.get_full_name }}
+                                {% else %}
+                                    {{ leave.get_department_display }}
+                                {% endif %}
+                            </td>
+                            <td>{{ leave.number_of_days }}</td>
+                            <td>{{ leave.reason }}</td>
+                            <td>
+                                <form method="post" action="{% url 'delete_compensatory_leave' leave.id %}" 
+                                      onsubmit="return confirm('Are you sure you want to delete this leave?');" 
+                                      style="display: inline;">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="alert alert-info">No compensatory leaves found.</div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Get form elements
+    const form = document.querySelector('form');
+    const grantType = document.getElementById('grantType');
+    const employeeField = document.getElementById('employeeField');
+    const departmentField = document.getElementById('departmentField');
+    const employeeSelect = document.getElementById('employeeSelect');
+    const departmentSelect = document.getElementById('departmentSelect');
+
+    // Function to toggle field visibility with animation
+    function showField(field, otherField) {
+        if (field) {
+            field.classList.add('visible');
+            const select = field.querySelector('select');
+            if (select) {
+                select.required = true;
+                // Reset selection
+                select.selectedIndex = 0;
+            }
+        }
+        
+        if (otherField) {
+            otherField.classList.remove('visible');
+            const select = otherField.querySelector('select');
+            if (select) {
+                select.required = false;
+                select.selectedIndex = 0;
+            }
+        }
+    }
+
+    // Handle grant type changes
+    grantType.addEventListener('change', function() {
+        const selectedValue = this.value;
+        
+        if (selectedValue === 'INDIVIDUAL') {
+            showField(employeeField, departmentField);
+        } else if (selectedValue === 'DEPARTMENT') {
+            showField(departmentField, employeeField);
+        } else {
+            employeeField.classList.remove('visible');
+            departmentField.classList.remove('visible');
+        }
+    });
+
+    // Handle employee selection
+    employeeSelect.addEventListener('change', function() {
+        const selectedOption = this.options[this.selectedIndex];
+        const infoElement = document.getElementById('employeeInfo');
+        
+        if (selectedOption && selectedOption.value) {
+            const department = selectedOption.textContent.split(' - ')[1];
+            infoElement.textContent = 'Department: ' + department;
+            infoElement.style.display = 'block';
+        } else {
+            infoElement.textContent = '';
+            infoElement.style.display = 'none';
+        }
+    });
+
+    // Form validation
+    form.addEventListener('submit', function(event) {
+        if (!form.checkValidity()) {
+            event.preventDefault();
+            event.stopPropagation();
+        }
+        form.classList.add('was-validated');
+    });
+
+    // Initialize fields based on any pre-selected value
+    if (grantType.value) {
+        grantType.dispatchEvent(new Event('change'));
+    }
+});
+</script>
+{% endblock %} 

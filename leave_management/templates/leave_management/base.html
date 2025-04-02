@@ -1,3 +1,4 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -31,12 +32,13 @@
             --section-bg-1: #FFF5F5;       /* Very Light Rose */
             --section-bg-2: #FFE5E5;       /* Light Rose Background */
             --dark-bg: #2A363B;           /* Dark Navy */
-            --primary-color: #E84A5F;      /* Deep Rose */
-            --secondary-color: #FF8C42;    /* Warm Orange */
+            --primary-color: #6c2bd9;
+            --secondary-color: #8e44ad;
             --page-bg-start: #FFF5F5;     /* Very Light Rose */
             --page-bg-end: #FFE5E5;       /* Light Rose */
             --card-bg-opacity: rgba(255, 255, 255, 0.95);
             --content-bg: rgba(255, 255, 255, 0.9);
+            --info-color: #3498db;
         }
 
         body {
@@ -79,30 +81,133 @@
 
         /* Update card styling */
         .card {
-            background: var(--card-bg-opacity);
-            border: none;
-            border-radius: 1rem;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            backdrop-filter: blur(10px);
-            margin-bottom: 1.5rem;
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            background: rgba(255, 255, 255, 0.7) !important;
+            backdrop-filter: blur(10px) !important;
+            border: 1px solid rgba(255, 255, 255, 0.2) !important;
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15) !important;
+            border-radius: 15px !important;
+            transition: all 0.3s ease !important;
         }
 
         .card:hover {
             transform: translateY(-5px);
-            box-shadow: 0 8px 15px rgba(232, 74, 95, 0.15);
+            box-shadow: 0 12px 40px 0 rgba(31, 38, 135, 0.25) !important;
         }
 
-        /* Update table styling */
+        .card-header {
+            background: rgba(108, 43, 217, 0.1) !important;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2) !important;
+            border-radius: 15px 15px 0 0 !important;
+            color: var(--primary-color) !important;
+            font-weight: 600 !important;
+        }
+
+        .btn-primary {
+            background-color: var(--primary-color) !important;
+            border-color: var(--primary-color) !important;
+        }
+
+        .btn-primary:hover {
+            background-color: var(--secondary-color) !important;
+            border-color: var(--secondary-color) !important;
+        }
+
+        .btn-outline-primary {
+            color: var(--primary-color) !important;
+            border-color: var(--primary-color) !important;
+        }
+
+        .btn-outline-primary:hover {
+            background-color: var(--primary-color) !important;
+            color: white !important;
+        }
+
+        .badge.bg-success {
+            background-color: var(--success-color) !important;
+        }
+
+        .badge.bg-danger {
+            background-color: var(--danger-color) !important;
+        }
+
+        .badge.bg-warning {
+            background-color: var(--warning-color) !important;
+        }
+
+        .badge.bg-info {
+            background-color: var(--info-color) !important;
+        }
+
+        .alert-success {
+            background-color: rgba(39, 174, 96, 0.1) !important;
+            border-color: var(--success-color) !important;
+            color: var(--success-color) !important;
+        }
+
+        .alert-danger {
+            background-color: rgba(231, 76, 60, 0.1) !important;
+            border-color: var(--danger-color) !important;
+            color: var(--danger-color) !important;
+        }
+
+        .alert-warning {
+            background-color: rgba(243, 156, 18, 0.1) !important;
+            border-color: var(--warning-color) !important;
+            color: var(--warning-color) !important;
+        }
+
+        .alert-info {
+            background-color: rgba(52, 152, 219, 0.1) !important;
+            border-color: var(--info-color) !important;
+            color: var(--info-color) !important;
+        }
+
         .table {
-            background: var(--content-bg);
-            border-radius: 1rem;
-            overflow: hidden;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+            background: rgba(255, 255, 255, 0.5) !important;
+            backdrop-filter: blur(5px) !important;
+            border-radius: 10px !important;
+            overflow: hidden !important;
         }
 
-        .table-hover tbody tr:hover {
-            background-color: var(--section-bg-2);
+        .table thead th {
+            background: rgba(108, 43, 217, 0.1) !important;
+            color: var(--primary-color) !important;
+            border-bottom: none !important;
+        }
+
+        .table-striped tbody tr:nth-of-type(odd) {
+            background-color: rgba(108, 43, 217, 0.05) !important;
+        }
+
+        .form-control, .form-select {
+            background: rgba(255, 255, 255, 0.8) !important;
+            border: 1px solid rgba(108, 43, 217, 0.2) !important;
+            border-radius: 8px !important;
+        }
+
+        .form-control:focus, .form-select:focus {
+            border-color: var(--primary-color) !important;
+            box-shadow: 0 0 0 0.25rem rgba(108, 43, 217, 0.25) !important;
+        }
+
+        /* Custom scrollbar for tables */
+        .table-responsive::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        .table-responsive::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+        }
+
+        .table-responsive::-webkit-scrollbar-thumb {
+            background: var(--primary-color);
+            border-radius: 4px;
+        }
+
+        .table-responsive::-webkit-scrollbar-thumb:hover {
+            background: var(--secondary-color);
         }
 
         /* Navbar Styling with professional gradient */
@@ -827,7 +932,91 @@
         .glass-container .alert-info {
             background: rgba(99, 102, 241, 0.3);
         }
+
+        /* Make all error messages black */
+        .alert {
+            color: black !important;
+            font-weight: normal !important;
+        }
+        .alert h5 {
+            color: black !important;
+            font-weight: 500 !important;
+        }
+        .alert p {
+            color: black !important;
+        }
+        .alert-danger {
+            color: black !important;
+            background-color: #f8d7da !important;
+            border-color: #f5c6cb !important;
+        }
+        .alert-success {
+            color: black !important;
+            background-color: #d4edda !important;
+            border-color: #c3e6cb !important;
+        }
+        .alert-warning {
+            color: black !important;
+            background-color: #fff3cd !important;
+            border-color: #ffeeba !important;
+        }
+        .alert-info {
+            color: black !important;
+            background-color: #d1ecf1 !important;
+            border-color: #bee5eb !important;
+        }
+        /* Make badge text black */
+        .badge {
+            color: black !important;
+        }
+        /* Django messages */
+        .messages {
+            color: black !important;
+        }
+        .messages .error {
+            color: black !important;
+        }
+        .messages .success {
+            color: black !important;
+        }
+        .messages .warning {
+            color: black !important;
+        }
+        .messages .info {
+            color: black !important;
+        }
+        /* Error text in forms */
+        .text-danger {
+            color: black !important;
+        }
+        .invalid-feedback {
+            color: black !important;
+        }
+        /* Error message styling */
+        .errorlist {
+            color: black !important;
+            list-style: none;
+            padding-left: 0;
+            margin-top: 0.5rem;
+        }
+        .errorlist li {
+            color: black !important;
+        }
+        /* Form validation messages */
+        .form-control.is-invalid ~ .invalid-feedback,
+        .form-control.is-invalid ~ .invalid-tooltip {
+            color: black !important;
+        }
+        /* Password validation messages */
+        .password-validation-error {
+            color: black !important;
+        }
+        /* Custom error messages */
+        .custom-error {
+            color: black !important;
+        }
     </style>
+    {% block extra_css %}{% endblock %}
 </head>
 <body>
     <!-- Navbar -->
@@ -846,14 +1035,17 @@
                     {% if user.is_admin %}
                     <!-- Admin Navigation - Left Side -->
                     <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" id="employeeDropdown" role="button" data-bs-toggle="dropdown">
-                            <i class="fas fa-users me-1"></i>Employees
+                        <a class="nav-link dropdown-toggle" href="#" id="employeesDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="fas fa-users me-2"></i>Employees
                         </a>
-                        <ul class="dropdown-menu">
-                            <li><a class="dropdown-item" href="{% url 'employee_list' %}">View All Employees</a></li>
-                            <li><a class="dropdown-item" href="{% url 'register_employee' %}">Register Employee</a></li>
-                            <li><a class="dropdown-item" href="{% url 'bulk_register' %}">Bulk Register</a></li>
-                            <li><a class="dropdown-item" href="{% url 'admin_change_user_password' %}">Change Password</a></li>
+                        <ul class="dropdown-menu" aria-labelledby="employeesDropdown">
+                            <li><a class="dropdown-item" href="{% url 'employee_list' %}"><i class="fas fa-list me-2"></i>Employee List</a></li>
+                            <li><a class="dropdown-item" href="{% url 'register_employee' %}"><i class="fas fa-user-plus me-2"></i>Add Employee</a></li>
+                            <li><a class="dropdown-item" href="{% url 'bulk_register' %}"><i class="fas fa-file-import me-2"></i>Bulk Register</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="{% url 'admin_change_user_password' %}"><i class="fas fa-key me-2"></i>Change Employee Password</a></li>
+                            <li><a class="dropdown-item" href="{% url 'delete_employee' %}"><i class="fas fa-user-minus me-2"></i>Delete Employee</a></li>
+                            <li><a class="dropdown-item" href="{% url 'bulk_delete_employees' %}"><i class="fas fa-users-slash me-2"></i>Bulk Delete</a></li>
                         </ul>
                     </li>
                     <li class="nav-item dropdown">
@@ -863,9 +1055,15 @@
                         <ul class="dropdown-menu">
                             <li><a class="dropdown-item" href="{% url 'leave_applications' %}">Pending Applications</a></li>
                             <li><a class="dropdown-item" href="{% url 'employee_leave_history' %}">Leave History</a></li>
+                            <li><hr class="dropdown-divider"></li>
                             <li><a class="dropdown-item" href="{% url 'todays_leave' %}">Today's Leave</a></li>
                             <li><a class="dropdown-item" href="{% url 'employees_on_date' %}">Leave by Date</a></li>
                         </ul>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'manage_compensatory_leave' %}">
+                            <i class="fas fa-calendar-check me-1"></i>Compensatory Leave
+                        </a>
                     </li>
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" href="#" id="holidayDropdown" role="button" data-bs-toggle="dropdown">
@@ -882,6 +1080,11 @@
                         </a>
                     </li>
                     <li class="nav-item">
+                        <a class="nav-link" href="{% url 'reports' %}">
+                            <i class="fas fa-chart-bar me-1"></i>Reports
+                        </a>
+                    </li>
+                    <!-- <li class="nav-item">
                         <a class="nav-link position-relative" href="{% url 'notifications' %}">
                             <i class="fas fa-bell me-1"></i>Notifications
                             <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger notification-badge" id="navNotificationBadge" style="display: none;">
@@ -889,7 +1092,7 @@
                                 <span class="visually-hidden">failed login attempts</span>
                             </span>
                         </a>
-                    </li>
+                    </li> -->
                     {% else %}
                     <!-- Employee Navigation - Left Side -->
                     <li class="nav-item">
@@ -908,6 +1111,11 @@
                         </a>
                     </li>
                     <li class="nav-item">
+                        <a class="nav-link" href="{% url 'my_compensatory_leaves' %}">
+                            <i class="fas fa-calendar-check me-1"></i>My Compensatory Leaves
+                        </a>
+                    </li>
+                    <li class="nav-item">
                         <a class="nav-link" href="{% url 'user_attendance' %}">
                             <i class="fas fa-clock me-1"></i>My Attendance
                         </a>
@@ -918,19 +1126,20 @@
                 <ul class="navbar-nav">
 
                     <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown">
-                            <i class="fas fa-user-circle me-1"></i>{{ user.get_full_name }}
+                        <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="fas fa-user-circle me-1"></i>{{ user.get_full_name|default:user.employee_id }}
                         </a>
-                        <ul class="dropdown-menu dropdown-menu-end">
-                            <li><a class="dropdown-item" href="{% url 'change_password' %}">Change Password</a></li>
+                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
+                            <li>
+                                <a class="dropdown-item" href="{% url 'change_password' %}">
+                                    <i class="fas fa-key me-2"></i>Change Password
+                                </a>
+                            </li>
                             <li><hr class="dropdown-divider"></li>
                             <li>
-                                <a href="{% url 'logout' %}" class="dropdown-item text-danger" onclick="event.preventDefault(); document.getElementById('logout-form').submit();">
+                                <a class="dropdown-item text-danger" href="{% url 'logout' %}">
                                     <i class="fas fa-sign-out-alt me-2"></i>Logout
                                 </a>
-                                <form id="logout-form" action="{% url 'logout' %}" method="post" class="d-none">
-                                    {% csrf_token %}
-                                </form>
                             </li>
                         </ul>
                     </li>

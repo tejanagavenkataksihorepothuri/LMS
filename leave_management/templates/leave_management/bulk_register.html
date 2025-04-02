@@ -43,9 +43,11 @@
                             <li><code>employee_id</code> - Unique identifier</li>
                             <li><code>first_name</code> - First name</li>
                             <li><code>last_name</code> - Last name</li>
-                            <li><code>department</code> - Department code</li>
+                            <li><code>department</code> - Department code (CSE, ECE, EEE, CIVIL, MECH, AI, NON_TEACHING, MATH, ENGLISH)</li>
                             <li><code>password</code> - Initial password</li>
                             <li><code>phone_number</code> - Contact number (optional)</li>
+                            <li><code>date_of_joining</code> - Date of joining (YYYY-MM-DD)</li>
+                            <li><code>current_salary</code> - Current salary in INR (must be a positive number)</li>
                         </ul>
                         <div class="mt-3">
                             <a href="{% url 'download_csv_template' %}" class="btn btn-outline-primary">
@@ -67,6 +69,9 @@
                         <th>Name</th>
                         <th>Department</th>
                         <th>Phone Number</th>
+                        <th>Date of Joining</th>
+                        <th>Current Salary</th>
+                        <th>Summer Leaves</th>
                         <th>Status</th>
                     </tr>
                 </thead>
@@ -77,6 +82,9 @@
                         <td>{{ row.first_name }} {{ row.last_name }}</td>
                         <td>{{ row.department }}</td>
                         <td>{{ row.phone_number|default:'-' }}</td>
+                        <td>{{ row.date_of_joining }}</td>
+                        <td>{{ row.current_salary|default:'-' }}</td>
+                        <td>{{ row.summer_leaves }}</td>
                         <td>
                             {% if row.status == 'success' %}
                             <span class="badge bg-success">Success</span>

@@ -5,9 +5,9 @@ from django.contrib import messages
 from django.utils import timezone
 from django.http import JsonResponse
 from django.views.decorators.http import require_POST
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 import json
-from .models import Employee, LeaveRequest, LeaveHistory, LoginAttempt, Holiday, Attendance
+from .models import Employee, LeaveRequest, LeaveHistory, LoginAttempt, Holiday, Attendance, CompensatoryLeave
 from django.contrib.auth.views import LoginView, PasswordChangeView
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.urls import reverse_lazy
@@ -22,6 +22,11 @@ from django.template.loader import get_template
 from io import BytesIO
 from xhtml2pdf import pisa
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+from django.views.decorators.csrf import ensure_csrf_cookie
+from django.utils.decorators import method_decorator
+from django.db.models import Count, Avg
+from django.db.models.functions import ExtractMonth
+from .forms import HolidayForm
 
 def is_admin(user):
     return user.is_admin
@@ -29,6 +34,9 @@ def is_admin(user):
 def admin_required(view_func):
     decorated_view = user_passes_test(is_admin)(view_func)
     return decorated_view
+
+def is_staff(user):
+    return user.is_staff
 
 class EmployeeForm(forms.ModelForm):
     password = forms.CharField(
@@ -41,13 +49,50 @@ class EmployeeForm(forms.ModelForm):
         required=False,
         widget=forms.TextInput(attrs={
             'class': 'form-control',
-            'placeholder': 'Enter phone number (optional)'
+            'placeholder': 'Enter 10-digit phone number',
+            'pattern': '[0-9]{10}',
+            'title': 'Phone number must be exactly 10 digits',
+            'onkeypress': 'return (event.charCode >= 48 && event.charCode <= 57)',
+            'maxlength': '10',
+            'minlength': '10',
+            'type': 'number',
+            'oninput': 'javascript: if (this.value.length > this.maxLength) this.value = this.value.slice(0, this.maxLength);'
+        })
+    )
+    date_of_joining = forms.DateField(
+        widget=forms.DateInput(attrs={
+            'class': 'form-control',
+            'type': 'date'
         })
     )
     
+    current_salary = forms.FloatField(
+        required=True,
+        widget=forms.NumberInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Enter current salary',
+            'min': '0',
+            'step': '0.01'
+        })
+    )
+
     class Meta:
         model = Employee
-        fields = ['first_name', 'last_name', 'employee_id', 'department', 'phone_number', 'password']
+        fields = ['first_name', 'last_name', 'employee_id', 'department', 'phone_number', 'date_of_joining', 'current_salary', 'password']
+
+    def clean_phone_number(self):
+        phone_number = self.cleaned_data.get('phone_number')
+        if phone_number:
+            # Remove any non-digit characters
+            phone_number = ''.join(filter(str.isdigit, str(phone_number)))
+            if not phone_number.isdigit():
+                raise forms.ValidationError("Phone number must contain only digits")
+            if len(phone_number) != 10:
+                raise forms.ValidationError("Phone number must be exactly 10 digits")
+            # Additional check to ensure no letters
+            if any(c.isalpha() for c in str(phone_number)):
+                raise forms.ValidationError("Phone number cannot contain letters")
+        return phone_number
 
 class LeaveRequestForm(forms.ModelForm):
     class Meta:
@@ -58,11 +103,14 @@ class LeaveRequestForm(forms.ModelForm):
             'end_date': forms.DateInput(attrs={'type': 'date'}),
         }
 
+@method_decorator(ensure_csrf_cookie, name='dispatch')
 class CustomLoginView(LoginView):
     template_name = 'leave_management/login.html'
     
     def form_valid(self, form):
         username = form.cleaned_data.get('username')
+        password = form.cleaned_data.get('password')
+        role = self.request.POST.get('role')
         
         # Add rate limiting check with case-insensitive filter
         recent_attempts = LoginAttempt.objects.filter(
@@ -71,36 +119,68 @@ class CustomLoginView(LoginView):
         ).count()
         
         if recent_attempts >= 5:
-            messages.error(self.request, 'Too many login attempts. Please try again later.')
+            messages.error(
+                self.request,
+                'Your account has been temporarily locked due to too many failed login attempts. '
+                'Please try again after 15 minutes or contact your administrator.'
+            )
             return self.form_invalid(form)
         
-        password = form.cleaned_data.get('password')
-        role = self.request.POST.get('role')
-        
         if not role:
-            messages.error(self.request, 'Please select a role')
+            messages.error(self.request, 'Please select your role (Employee or Employer) to continue.')
             return self.form_invalid(form)
             
         # Use iexact for case-insensitive comparison but keep original case
         user = Employee.objects.filter(employee_id__iexact=username).first()
         if user is None:
-            messages.info(self.request, 'Invalid credentials or incorrect role selected')
+            self._record_failed_attempt(username, role)
+            messages.error(
+                self.request,
+                'Invalid Employee ID or password. Please check your credentials and try again.'
+            )
             return self.form_invalid(form)
             
         if user and user.check_password(password):
             # Validate role selection
             if (role == 'employer' and not user.is_admin) or (role == 'employee' and user.is_admin):
                 self._record_failed_attempt(username, role)
-                messages.error(self.request, 'Invalid credentials or incorrect role selected')
+                messages.error(
+                    self.request,
+                    'Access denied. The selected role does not match your account permissions. '
+                    'Please choose the correct role and try again.'
+                )
                 return self.form_invalid(form)
             
             # Use the original employee_id case for display
             form.cleaned_data['username'] = user.employee_id
-            return super().form_valid(form)
+            response = super().form_valid(form)
+            
+            # Add success message
+            messages.success(
+                self.request,
+                f'Welcome back, {user.get_full_name() or user.employee_id}! You have successfully logged in.'
+            )
+            
+            # Ensure CSRF cookie is set
+            response.csrf_cookie_set = True
+            return response
         else:
             self._record_failed_attempt(username, role)
-            messages.error(self.request, 'Invalid credentials or incorrect role selected')
+            remaining_attempts = 5 - (recent_attempts + 1)
+            messages.error(
+                self.request,
+                f'Invalid Employee ID or password. You have {remaining_attempts} {"attempt" if remaining_attempts == 1 else "attempts"} '
+                'remaining before your account is temporarily locked.'
+            )
             return self.form_invalid(form)
+    
+    def form_invalid(self, form):
+        for field, errors in form.errors.items():
+            for error in errors:
+                messages.error(self.request, f'{error}')
+        response = super().form_invalid(form)
+        response.csrf_cookie_set = True
+        return response
     
     def _record_failed_attempt(self, username, role):
         LoginAttempt.objects.create(
@@ -118,11 +198,34 @@ class ChangePasswordView(LoginRequiredMixin, PasswordChangeView):
     template_name = 'leave_management/change_password.html'
     success_url = reverse_lazy('home')
 
+    def form_valid(self, form):
+        messages.success(self.request, 'Your password was successfully updated!')
+        return super().form_valid(form)
+
+    def form_invalid(self, form):
+        messages.error(self.request, 'Please correct the errors below.')
+        return super().form_invalid(form)
+
 @login_required
 def home(request):
     if request.user.is_admin:
         return redirect('admin_home')
     return render(request, 'leave_management/home.html')
+
+def calculate_summer_leaves(employee):
+    """Calculate summer leaves based on employee experience"""
+    if not employee.date_of_joining:
+        return 3  # Default to minimum if no joining date
+        
+    today = date.today()
+    experience = (today - employee.date_of_joining).days / 365.0  # Experience in years
+    
+    if experience < 1:
+        return 3
+    elif experience < 2:
+        return 6
+    else:
+        return 12
 
 @login_required
 def apply_leave(request):
@@ -135,13 +238,20 @@ def apply_leave(request):
             if leave_request.end_date < leave_request.start_date:
                 messages.error(request, 'End date cannot be before start date')
                 return render(request, 'leave_management/apply_leave.html', {'form': form})
-                
-            # Add validation for maximum leave duration
-            if leave_request.number_of_days > 30:  # Example max duration
-                messages.error(request, 'Leave request cannot exceed 30 days')
-                return render(request, 'leave_management/apply_leave.html', {'form': form})
             
             leave_request.employee = request.user
+            
+            # Calculate working days (excluding Sundays and holidays)
+            working_days = leave_request.calculate_working_days()
+            
+            if working_days == 0:
+                messages.error(request, 'Selected dates only include holidays and/or Sundays. Please select valid working days.')
+                return render(request, 'leave_management/apply_leave.html', {'form': form})
+            
+            # Add validation for maximum leave duration
+            if working_days > 30:
+                messages.error(request, 'Leave request cannot exceed 30 working days')
+                return render(request, 'leave_management/apply_leave.html', {'form': form})
             
             # Update employee's leave balance
             request.user.update_leaves()
@@ -163,22 +273,29 @@ def apply_leave(request):
                 messages.error(request, 'You already have a leave request for these dates')
                 return render(request, 'leave_management/apply_leave.html', {'form': form})
             
-            # Calculate number of days
-            leave_request.number_of_days = (leave_request.end_date - leave_request.start_date).days + 1
+            # Set number of working days
+            leave_request.number_of_days = working_days
             
             # Check if it's a May leave (summer vacation)
             if leave_request.start_date.month == 5:
-                if leave_request.number_of_days > request.user.summer_leaves_remaining:
-                    messages.error(request, f'You only have {request.user.summer_leaves_remaining} summer leaves remaining')
+                summer_leaves_allowed = calculate_summer_leaves(request.user)
+                if working_days > request.user.summer_leaves_remaining:
+                    messages.error(request, f'You only have {request.user.summer_leaves_remaining} summer leaves remaining (Based on {summer_leaves_allowed} total summer leaves for your experience)')
                     return render(request, 'leave_management/apply_leave.html', {'form': form})
+                leave_request.leave_type = 'SUMMER'
             else:
                 # Regular month leave logic
-                if leave_request.number_of_days > request.user.casual_leaves_remaining:
-                    extra_days_needed = leave_request.number_of_days - request.user.casual_leaves_remaining
+                if working_days > request.user.casual_leaves_remaining:
+                    extra_days_needed = working_days - request.user.casual_leaves_remaining
                     leave_request.is_extra_leave = True
-                
+                    leave_request.leave_type = 'EXTRA'
+                else:
+                    leave_request.leave_type = 'CASUAL'
+            
+            # Explicitly set status to PENDING
+            leave_request.status = 'PENDING'
             leave_request.save()
-            messages.success(request, 'Leave request submitted successfully!')
+            messages.success(request, f'Leave request submitted successfully for {working_days} working days! (Excluding Sundays and holidays)')
             return redirect('leave_history')
     else:
         form = LeaveRequestForm()
@@ -207,9 +324,41 @@ def apply_leave(request):
 
 @login_required
 def leave_history(request):
+    # Get all leave requests for the user
     leave_requests = LeaveRequest.objects.filter(employee=request.user).order_by('-created_at')
     
-    # Pagination
+    # Get the current academic year's monthly history
+    current_date = timezone.now().date()
+    current_year = current_date.year
+    
+    # Get all leave history for current year
+    monthly_history = LeaveHistory.objects.filter(
+        employee=request.user,
+        year=current_year
+    ).order_by('month')
+    
+    # Create monthly report for all months
+    monthly_data = []
+    for month in range(1, 13):
+        history = monthly_history.filter(month=month).first()
+        if history:
+            monthly_data.append({
+                'month': datetime(2000, month, 1).strftime('%B'),  # Month name
+                'year': current_year,
+                'casual_leaves_taken': history.casual_leaves_taken,
+                'extra_leaves_taken': history.extra_leaves_taken,
+                'summer_leaves_taken': history.summer_leaves_taken
+            })
+        else:
+            monthly_data.append({
+                'month': datetime(2000, month, 1).strftime('%B'),  # Month name
+                'year': current_year,
+                'casual_leaves_taken': 0,
+                'extra_leaves_taken': 0,
+                'summer_leaves_taken': 0
+            })
+    
+    # Pagination for leave requests
     page = request.GET.get('page', 1)
     paginator = Paginator(leave_requests, 10)  # Show 10 records per page
     
@@ -219,8 +368,14 @@ def leave_history(request):
         leave_page = paginator.page(1)
     except EmptyPage:
         leave_page = paginator.page(paginator.num_pages)
-        
-    return render(request, 'leave_management/leave_history.html', {'leave_requests': leave_page})
+    
+    context = {
+        'leaves': leave_page,
+        'monthly_history': monthly_data,
+        'user': request.user
+    }
+    
+    return render(request, 'leave_management/leave_history.html', context)
 
 @login_required
 @user_passes_test(is_admin)
@@ -251,6 +406,7 @@ def employee_leave_history(request):
     # Get search query and department filter
     search_query = request.GET.get('search', '')
     selected_department = request.GET.get('department', '')
+    export_format = request.GET.get('export', '')
     
     # Start with all non-admin employees
     employees = Employee.objects.filter(is_admin=False)
@@ -291,17 +447,19 @@ def employee_leave_history(request):
             start_date__month=5
         ).count()
         
-        # Count extra leaves (after casual leaves are exhausted)
-        extra_leaves = max(0, casual_leaves_used - emp.casual_leaves_remaining)
-        
         # Get current month's leaves
         monthly_leaves = approved_leaves.filter(
             start_date__month=current_date.month
-        ).count()
+        )
         
         # Calculate monthly casual vs extra leaves
-        monthly_casual = min(monthly_leaves, emp.casual_leaves_remaining)
-        monthly_extra = max(0, monthly_leaves - monthly_casual)
+        monthly_casual = 0
+        monthly_extra = 0
+        for leave in monthly_leaves:
+            if leave.leave_type == 'EXTRA':
+                monthly_extra += leave.number_of_days
+            else:
+                monthly_casual += leave.number_of_days
         
         employee_list.append({
             'employee_id': emp.employee_id,
@@ -309,12 +467,50 @@ def employee_leave_history(request):
             'department': emp.get_department_display(),
             'casual_leaves_used': casual_leaves_used,
             'casual_leaves_available': emp.casual_leaves_remaining,
-            'extra_leaves_total': extra_leaves,
+            'extra_leaves_total': emp.extra_leaves_taken,
             'monthly_extra_leaves': monthly_extra,
             'monthly_casual_leaves': monthly_casual,
             'summer_leaves': summer_leaves,
             'summer_leaves_remaining': emp.summer_leaves_remaining
         })
+
+    # Handle export
+    if export_format:
+        if export_format == 'excel':
+            # Prepare data for Excel export
+            data = [{
+                'Employee ID': emp['employee_id'],
+                'Name': emp['name'],
+                'Department': emp['department'],
+                'Casual Leaves Used': emp['casual_leaves_used'],
+                'Casual Leaves Available': emp['casual_leaves_available'],
+                'Extra Leaves Total': emp['extra_leaves_total'],
+                'Monthly Extra Leaves': emp['monthly_extra_leaves'],
+                'Monthly Casual Leaves': emp['monthly_casual_leaves'],
+                'Summer Leaves Taken': emp['summer_leaves'],
+                'Summer Leaves Remaining': emp['summer_leaves_remaining']
+            } for emp in employee_list]
+            
+            headers = [
+                'Employee ID', 'Name', 'Department', 
+                'Casual Leaves Used', 'Casual Leaves Available',
+                'Extra Leaves Total', 'Monthly Extra Leaves',
+                'Monthly Casual Leaves', 'Summer Leaves Taken',
+                'Summer Leaves Remaining'
+            ]
+            return export_to_excel(data, 'employee_leave_history', headers)
+            
+        elif export_format == 'pdf':
+            context = {
+                'employee_list': employee_list,
+                'current_date': timezone.now().strftime('%B %d, %Y'),
+                'title': 'Employee Leave History'
+            }
+            return export_to_pdf(
+                'leave_management/pdf/employee_leave_history.html',
+                context,
+                'employee_leave_history'
+            )
     
     context = {
         'employees': employee_list,
@@ -331,61 +527,141 @@ def employee_leave_detail(request, employee_id):
     # Use case-insensitive lookup
     employee = get_object_or_404(Employee, employee_id__iexact=employee_id)
     
-    # Get all leave requests
+    # Get all leave requests ordered by applied date
     leave_requests = LeaveRequest.objects.filter(employee=employee).order_by('-created_at')
     
-    leave_history = []
+    # Initialize monthly data
+    monthly_data = {}
+    
     for leave in leave_requests:
         leave_type = 'Summer' if leave.start_date.month == 5 else 'Regular'
-        leave_history.append({
+        month_key = leave.created_at.strftime('%B %Y')
+        
+        if month_key not in monthly_data:
+            monthly_data[month_key] = {
+                'month': month_key,
+                'list': [],
+                'total_days': 0,
+                'approved_count': 0,
+                'pending_count': 0,
+                'rejected_count': 0
+            }
+        
+        # Add leave to monthly data
+        leave_data = {
             'start_date': leave.start_date.strftime('%Y-%m-%d'),
             'end_date': leave.end_date.strftime('%Y-%m-%d'),
-            'number_of_days': (leave.end_date - leave.start_date).days + 1,
+            'number_of_days': leave.number_of_days,
             'type': leave_type,
             'reason': leave.reason,
             'status': leave.status,
             'applied_date': leave.created_at.strftime('%Y-%m-%d %H:%M'),
-            'approved_date': leave.updated_at.strftime('%Y-%m-%d %H:%M') if leave.status != 'PENDING' else '-'
-        })
+            'approved_date': leave.updated_at.strftime('%Y-%m-%d %H:%M') if leave.status != 'PENDING' and hasattr(leave, 'updated_at') and leave.updated_at else '-'
+        }
+        
+        monthly_data[month_key]['list'].append(leave_data)
+        monthly_data[month_key]['total_days'] += leave.number_of_days
+        
+        # Update status counts
+        if leave.status == 'APPROVED':
+            monthly_data[month_key]['approved_count'] += 1
+        elif leave.status == 'PENDING':
+            monthly_data[month_key]['pending_count'] += 1
+        else:  # REJECTED
+            monthly_data[month_key]['rejected_count'] += 1
+    
+    # Convert to list and sort by date (most recent first)
+    monthly_leaves = list(monthly_data.values())
+    monthly_leaves.sort(key=lambda x: datetime.strptime(x['month'], '%B %Y'), reverse=True)
     
     context = {
         'employee': employee,
-        'leave_history': leave_history,
+        'monthly_leaves': monthly_leaves,
         'casual_leaves_remaining': employee.casual_leaves_remaining,
         'summer_leaves_remaining': employee.summer_leaves_remaining,
-        'extra_leaves_taken': max(0, employee.extra_leaves_taken)
+        'extra_leaves_taken': employee.extra_leaves_taken
     }
     
     return render(request, 'leave_management/employee_details.html', context)
 
 @login_required
-@user_passes_test(is_admin)
 def employee_list(request):
-    employees = Employee.objects.all()
-    export_format = request.GET.get('export')
+    # Get sort parameters
+    sort_by = request.GET.get('sort_by', 'employee_id')
+    sort_order = request.GET.get('order', 'asc')
+    search_query = request.GET.get('search', '')
     
+    # Start with all non-admin employees
+    employees = Employee.objects.filter(is_admin=False)
+    
+    # Apply search if provided
+    if search_query:
+        employees = employees.filter(
+            Q(employee_id__icontains=search_query) |
+            Q(first_name__icontains=search_query) |
+            Q(last_name__icontains=search_query) |
+            Q(phone_number__icontains=search_query)
+        )
+    
+    # Calculate experience for each employee
+    from datetime import date
+    today = date.today()
+    
+    employee_data = []
+    for emp in employees:
+        if emp.date_of_joining:
+            experience = today - emp.date_of_joining
+            years = experience.days // 365
+            months = (experience.days % 365) // 30
+            experience_str = f"{years} years, {months} months"
+        else:
+            experience_str = "N/A"
+            
+        employee_data.append({
+            'employee': emp,
+            'experience': experience_str
+        })
+    
+    # Apply sorting
+    if sort_by == 'department':
+        employee_data.sort(key=lambda x: x['employee'].get_department_display())
+    else:  # sort by employee_id
+        employee_data.sort(key=lambda x: x['employee'].employee_id)
+    
+    # Reverse if descending order
+    if sort_order == 'desc':
+        employee_data.reverse()
+    
+    # Export functionality
+    export_format = request.GET.get('export')
     if export_format:
         if export_format == 'excel':
             data = [{
-                'Employee ID': emp.employee_id,
-                'Name': emp.get_full_name(),
-                'Department': emp.get_department_display(),
-                'Phone': emp.phone_number or '-'
-            } for emp in employees]
+                'Employee ID': emp['employee'].employee_id,
+                'Name': emp['employee'].get_full_name(),
+                'Department': emp['employee'].get_department_display(),
+                'Phone': emp['employee'].phone_number or '-',
+                'Experience': emp['experience']
+            } for emp in employee_data]
             
-            headers = ['Employee ID', 'Name', 'Department', 'Phone']
+            headers = ['Employee ID', 'Name', 'Department', 'Phone', 'Experience']
             return export_to_excel(data, 'employee_list', headers)
             
         elif export_format == 'pdf':
+            context = {
+                'employees': employee_data,
+                'title': 'Employee List',
+                'today': today.strftime('%B %d, %Y')
+            }
             return export_to_pdf(
                 'leave_management/pdf/employee_list.html',
-                {'employees': employees},
+                context,
                 'employee_list'
             )
     
     # Pagination
     page = request.GET.get('page', 1)
-    paginator = Paginator(employees, 10)  # Show 10 records per page
+    paginator = Paginator(employee_data, 10)  # Show 10 records per page
     
     try:
         employee_page = paginator.page(page)
@@ -393,8 +669,16 @@ def employee_list(request):
         employee_page = paginator.page(1)
     except EmptyPage:
         employee_page = paginator.page(paginator.num_pages)
+    
+    context = {
+        'employees': employee_page,
+        'sort_by': sort_by,
+        'sort_order': sort_order,
+        'search_query': search_query,
+        'departments': dict(Employee.DEPARTMENT_CHOICES)
+    }
         
-    return render(request, 'leave_management/employee_list.html', {'employees': employee_page})
+    return render(request, 'leave_management/employee_list.html', context)
 
 @login_required
 @user_passes_test(is_admin)
@@ -414,9 +698,14 @@ def register_employee(request):
             employee.username = employee_id  # Will be converted to uppercase in save method
             employee.employee_id = employee_id  # Keep original case
             employee.set_password(form.cleaned_data['password'])
+            
+            # Set initial summer leaves based on experience
+            summer_leaves = calculate_summer_leaves(employee)
+            employee.summer_leaves_remaining = summer_leaves
+            
             employee.save()
             
-            messages.success(request, 'Employee registered successfully!')
+            messages.success(request, f'Employee registered successfully with {summer_leaves} summer leaves based on experience!')
             return redirect('employee_list')
     else:
         form = EmployeeForm()
@@ -482,10 +771,10 @@ def approve_leave(request, leave_id):
                 # If casual leaves are not enough, use them all and mark the rest as extra
                 if employee.casual_leaves_remaining > 0:
                     history.casual_leaves_taken += employee.casual_leaves_remaining
-                    extra_leaves = leave_request.number_of_days - employee.casual_leaves_remaining
-                    history.extra_leaves_taken += extra_leaves
-                    employee.extra_leaves_taken += extra_leaves
                     employee.casual_leaves_remaining = 0
+                    extra_leaves_needed = leave_request.number_of_days - employee.casual_leaves_remaining
+                    history.extra_leaves_taken += extra_leaves_needed
+                    employee.extra_leaves_taken += extra_leaves_needed
                 else:
                     # If no casual leaves remaining, all are extra
                     history.extra_leaves_taken += leave_request.number_of_days
@@ -508,6 +797,33 @@ def reject_leave(request, leave_id):
         leave_request.status = 'REJECTED'
         leave_request.save()
     return redirect('leave_applications')
+
+@login_required
+def cancel_leave(request, leave_id):
+    leave_request = get_object_or_404(LeaveRequest, id=leave_id)
+    
+    # Verify that the leave request belongs to the user
+    if leave_request.employee != request.user:
+        messages.error(request, 'You can only cancel your own leave requests.')
+        return redirect('my_leaves')
+    
+    # Check if the leave request is pending and hasn't started
+    if leave_request.status != 'PENDING':
+        messages.error(request, 'Only pending leave requests can be cancelled.')
+        return redirect('my_leaves')
+    
+    from datetime import date
+    if leave_request.start_date <= date.today():
+        messages.error(request, 'Cannot cancel a leave that has already started or passed.')
+        return redirect('my_leaves')
+    
+    # Cancel the leave request
+    leave_request.status = 'CANCELLED'
+    leave_request.cancelled_at = timezone.now()
+    leave_request.save()
+    
+    messages.success(request, 'Leave request cancelled successfully.')
+    return redirect('my_leaves')
 
 @login_required
 @user_passes_test(is_admin)
@@ -669,7 +985,10 @@ def bulk_register(request):
         preview_data = []
         success_count = 0
         
-        required_fields = ['employee_id', 'first_name', 'last_name', 'department', 'password']
+        required_fields = ['employee_id', 'first_name', 'last_name', 'department', 'password', 'date_of_joining', 'current_salary']
+        
+        # Get valid departments from model choices
+        valid_departments = [dept[0] for dept in Employee.DEPARTMENT_CHOICES]
         
         # Validate CSV headers
         headers = reader.fieldnames
@@ -684,12 +1003,45 @@ def bulk_register(request):
                     raise ValueError(f"All fields are required. Missing data in row.")
                 
                 # Validate department
-                if row['department'] not in dict(Employee.DEPARTMENT_CHOICES):
-                    raise ValueError(f"Invalid department: {row['department']}")
+                if row['department'] not in valid_departments:
+                    raise ValueError(f"Invalid department: {row['department']}. Valid departments are: {', '.join(valid_departments)}")
                 
                 # Validate password length
                 if len(row['password']) < 8:
                     raise ValueError("Password must be at least 8 characters long")
+
+                # Validate current salary
+                try:
+                    current_salary = float(row['current_salary'])
+                    if current_salary < 0:
+                        raise ValueError("Salary cannot be negative")
+                except ValueError:
+                    raise ValueError("Current salary must be a valid number")
+
+                # Validate phone number if provided
+                phone_number = row.get('phone_number', '').strip()
+                if phone_number:
+                    # Remove any non-digit characters
+                    phone_number = ''.join(filter(str.isdigit, str(phone_number)))
+                    # Check for letters
+                    if any(c.isalpha() for c in str(phone_number)):
+                        raise ValueError("Phone number cannot contain letters")
+                    # Check for digits only
+                    if not phone_number.isdigit():
+                        raise ValueError("Phone number must contain only digits")
+                    # Check length
+                    if len(phone_number) != 10:
+                        raise ValueError("Phone number must be exactly 10 digits")
+                
+                # Validate and parse date of joining
+                try:
+                    date_of_joining = datetime.strptime(row['date_of_joining'], '%Y-%m-%d').date()
+                    if date_of_joining > date.today():
+                        raise ValueError("Date of joining cannot be in the future")
+                except ValueError as e:
+                    if "cannot be in the future" in str(e):
+                        raise e
+                    raise ValueError("Invalid date format. Use YYYY-MM-DD format for date of joining")
                 
                 # Check if employee_id already exists
                 if Employee.objects.filter(employee_id__iexact=row['employee_id']).exists():
@@ -702,12 +1054,18 @@ def bulk_register(request):
                     first_name=row['first_name'],
                     last_name=row['last_name'],
                     department=row['department'],
-                    phone_number=row.get('phone_number', ''),
+                    phone_number=phone_number,
+                    date_of_joining=date_of_joining,
                     is_admin=False
                 )
                 
                 # Set password before saving
                 employee.set_password(row['password'])
+                
+                # Calculate summer leaves based on experience
+                summer_leaves = calculate_summer_leaves(employee)
+                employee.summer_leaves_remaining = summer_leaves
+                
                 employee.save()
                 
                 preview_data.append({
@@ -716,6 +1074,8 @@ def bulk_register(request):
                     'last_name': employee.last_name,
                     'department': employee.get_department_display(),
                     'phone_number': employee.phone_number,
+                    'date_of_joining': employee.date_of_joining.strftime('%Y-%m-%d'),
+                    'summer_leaves': summer_leaves,
                     'status': 'success'
                 })
                 success_count += 1
@@ -727,6 +1087,8 @@ def bulk_register(request):
                     'last_name': row.get('last_name', 'N/A'),
                     'department': row.get('department', 'N/A'),
                     'phone_number': row.get('phone_number', 'N/A'),
+                    'date_of_joining': row.get('date_of_joining', 'N/A'),
+                    'summer_leaves': 'N/A',
                     'status': 'error',
                     'error': str(e)
                 })
@@ -747,10 +1109,18 @@ def download_csv_template(request):
     response['Content-Disposition'] = 'attachment; filename="employee_template.csv"'
     
     writer = csv.writer(response)
-    writer.writerow(['employee_id', 'first_name', 'last_name', 'department', 'password', 'phone_number'])
+    writer.writerow(['employee_id', 'first_name', 'last_name', 'department', 'password', 'phone_number', 'date_of_joining'])
     
-    # Add a sample row
-    writer.writerow(['UR01', 'John', 'Doe', 'CSE', 'welcome123', '1234567890'])
+    # Add example rows with different departments
+    writer.writerow(['CS01', 'John', 'Doe', 'CSE', 'welcome123', '9876543210', '2024-01-01'])
+    writer.writerow(['EC01', 'Jane', 'Smith', 'ECE', 'welcome123', '9876543211', '2024-01-01'])
+    writer.writerow(['EE01', 'Alice', 'Johnson', 'EEE', 'welcome123', '9876543212', '2024-01-01'])
+    writer.writerow(['ME01', 'Bob', 'Wilson', 'MECH', 'welcome123', '9876543213', '2024-01-01'])
+    writer.writerow(['CV01', 'Carol', 'Brown', 'CIVIL', 'welcome123', '9876543214', '2024-01-01'])
+    writer.writerow(['AI01', 'David', 'Lee', 'AI', 'welcome123', '9876543215', '2024-01-01'])
+    writer.writerow(['NT01', 'Emma', 'Davis', 'NON_TEACHING', 'welcome123', '9876543216', '2024-01-01'])
+    writer.writerow(['MT01', 'Frank', 'Miller', 'MATH', 'welcome123', '9876543217', '2024-01-01'])
+    writer.writerow(['EN01', 'Grace', 'Taylor', 'ENGLISH', 'welcome123', '9876543218', '2024-01-01'])
     
     return response
 
@@ -806,6 +1176,7 @@ def employees_on_date(request):
 @login_required
 def my_leaves(request):
     """View function to display the leave history for the logged-in employee"""
+    from datetime import date
     leaves = LeaveRequest.objects.filter(employee=request.user).order_by('-created_at')
     
     # Pagination
@@ -819,11 +1190,29 @@ def my_leaves(request):
     except EmptyPage:
         leave_page = paginator.page(paginator.num_pages)
         
-    return render(request, 'leave_management/leave_history.html', {'leaves': leave_page})
+    context = {
+        'leaves': leave_page,
+        'today': date.today()
+    }
+    return render(request, 'leave_management/leave_history.html', context)
 
 @login_required
 @admin_required
 def manage_holidays(request):
+    if request.method == 'POST':
+        form = HolidayForm(request.POST)
+        if form.is_valid():
+            holiday = form.save()
+            messages.success(request, f'Holiday "{holiday.name}" has been added successfully!')
+            return redirect('manage_holidays')
+        else:
+            for field, errors in form.errors.items():
+                for error in errors:
+                    messages.error(request, f'{error}')
+    else:
+        form = HolidayForm()
+    
+    # Get all holidays ordered by date
     holidays = Holiday.objects.all().order_by('-date')
     
     # Pagination
@@ -836,8 +1225,14 @@ def manage_holidays(request):
         holidays_page = paginator.page(1)
     except EmptyPage:
         holidays_page = paginator.page(paginator.num_pages)
-        
-    return render(request, 'leave_management/manage_holidays.html', {'holidays': holidays_page})
+    
+    context = {
+        'form': form,
+        'holidays': holidays_page,
+        'today': timezone.now().date()
+    }
+    
+    return render(request, 'leave_management/manage_holidays.html', context)
 
 @login_required
 @admin_required
@@ -1177,3 +1572,320 @@ def export_attendance_to_pdf(queryset, filename):
     if pisa_status.err:
         return HttpResponse('PDF generation error')
     return response
+
+@login_required
+@user_passes_test(is_admin)
+def manage_compensatory_leave(request):
+    if request.method == 'POST':
+        grant_type = request.POST.get('grant_type')
+        number_of_days = int(request.POST.get('number_of_days', 0))
+        reason = request.POST.get('reason', '')
+        
+        if number_of_days <= 0:
+            messages.error(request, 'Number of days must be greater than 0')
+            return redirect('manage_compensatory_leave')
+            
+        try:
+            comp_leave = CompensatoryLeave(
+                grant_type=grant_type,
+                number_of_days=number_of_days,
+                reason=reason,
+                granted_by=request.user
+            )
+            
+            if grant_type == 'INDIVIDUAL':
+                employee_id = request.POST.get('employee_id')
+                employee = Employee.objects.filter(employee_id__iexact=employee_id).first()
+                if not employee:
+                    messages.error(request, f'Employee with ID {employee_id} not found')
+                    return redirect('manage_compensatory_leave')
+                comp_leave.employee = employee
+                
+            else:  # DEPARTMENT
+                department = request.POST.get('department')
+                if not department:
+                    messages.error(request, 'Please select a department')
+                    return redirect('manage_compensatory_leave')
+                comp_leave.department = department
+            
+            comp_leave.save()
+            messages.success(request, 'Compensatory leave granted successfully')
+            
+        except Exception as e:
+            messages.error(request, f'Error granting compensatory leave: {str(e)}')
+            
+        return redirect('manage_compensatory_leave')
+    
+    # Get search query
+    search_query = request.GET.get('search', '')
+    
+    # Get compensatory leave history with search filter
+    comp_leaves = CompensatoryLeave.objects.all()
+    
+    if search_query:
+        comp_leaves = comp_leaves.filter(
+            Q(employee__employee_id__icontains=search_query) |
+            Q(employee__first_name__icontains=search_query) |
+            Q(employee__last_name__icontains=search_query)
+        )
+    
+    comp_leaves = comp_leaves.order_by('-granted_date')
+    
+    # Get list of departments and employees for the form
+    departments = dict(Employee.DEPARTMENT_CHOICES)
+    employees = Employee.objects.filter(is_admin=False).order_by('employee_id')
+    
+    context = {
+        'comp_leaves': comp_leaves,
+        'departments': departments,
+        'employees': employees,
+        'search_query': search_query
+    }
+    
+    return render(request, 'leave_management/manage_compensatory_leave.html', context)
+
+@login_required
+@user_passes_test(is_admin)
+def delete_compensatory_leave(request, comp_leave_id):
+    comp_leave = get_object_or_404(CompensatoryLeave, id=comp_leave_id)
+    
+    try:
+        # Reduce casual leaves for affected employees
+        if comp_leave.grant_type == 'INDIVIDUAL' and comp_leave.employee:
+            comp_leave.employee.casual_leaves_remaining -= comp_leave.number_of_days
+            comp_leave.employee.save()
+        elif comp_leave.grant_type == 'DEPARTMENT' and comp_leave.department:
+            employees = Employee.objects.filter(department=comp_leave.department)
+            for emp in employees:
+                emp.casual_leaves_remaining -= comp_leave.number_of_days
+                emp.save()
+        
+        comp_leave.delete()
+        messages.success(request, 'Compensatory leave deleted successfully')
+        
+    except Exception as e:
+        messages.error(request, f'Error deleting compensatory leave: {str(e)}')
+    
+    return redirect('manage_compensatory_leave')
+
+@login_required
+def my_compensatory_leaves(request):
+    """View function to display compensatory leaves for the logged-in employee"""
+    # Get search query
+    search_query = request.GET.get('search', '')
+    
+    # Get individual compensatory leaves
+    individual_leaves = CompensatoryLeave.objects.filter(
+        grant_type='INDIVIDUAL',
+        employee=request.user
+    )
+    
+    # Get department-wide compensatory leaves
+    department_leaves = CompensatoryLeave.objects.filter(
+        grant_type='DEPARTMENT',
+        department=request.user.department
+    )
+    
+    # Apply search if provided
+    if search_query:
+        individual_leaves = individual_leaves.filter(
+            Q(reason__icontains=search_query) |
+            Q(granted_date__icontains=search_query)
+        )
+        department_leaves = department_leaves.filter(
+            Q(reason__icontains=search_query) |
+            Q(granted_date__icontains=search_query)
+        )
+    
+    # Order by granted date
+    individual_leaves = individual_leaves.order_by('-granted_date')
+    department_leaves = department_leaves.order_by('-granted_date')
+    
+    # Combine both types of leaves
+    all_leaves = list(individual_leaves) + list(department_leaves)
+    all_leaves.sort(key=lambda x: x.granted_date, reverse=True)
+    
+    # Pagination
+    page = request.GET.get('page', 1)
+    paginator = Paginator(all_leaves, 10)  # Show 10 records per page
+    
+    try:
+        leaves_page = paginator.page(page)
+    except PageNotAnInteger:
+        leaves_page = paginator.page(1)
+    except EmptyPage:
+        leaves_page = paginator.page(paginator.num_pages)
+    
+    context = {
+        'compensatory_leaves': leaves_page,
+        'search_query': search_query
+    }
+    return render(request, 'leave_management/my_compensatory_leaves.html', context)
+
+@login_required
+@user_passes_test(is_admin)
+def bulk_delete_employees(request):
+    if request.method == 'POST':
+        employee_ids = request.POST.getlist('employee_ids')
+        admin_password = request.POST.get('password')
+        
+        if not employee_ids:
+            messages.error(request, 'No employees selected for deletion')
+            return redirect('employee_list')
+            
+        if not request.user.check_password(admin_password):
+            messages.error(request, 'Invalid admin password')
+            return redirect('employee_list')
+            
+        try:
+            # Filter out admin users and delete selected employees
+            deleted_count = 0
+            for emp_id in employee_ids:
+                try:
+                    employee = Employee.objects.get(employee_id__iexact=emp_id)
+                    if not employee.is_admin:
+                        employee.delete()
+                        deleted_count += 1
+                except Employee.DoesNotExist:
+                    continue
+            
+            if deleted_count > 0:
+                messages.success(request, f'Successfully deleted {deleted_count} employee(s)')
+            else:
+                messages.warning(request, 'No employees were deleted')
+                
+        except Exception as e:
+            messages.error(request, f'Error deleting employees: {str(e)}')
+            
+        return redirect('employee_list')
+    
+    # Get all non-admin employees for the template
+    employees = Employee.objects.filter(is_admin=False).order_by('employee_id')
+    return render(request, 'leave_management/bulk_delete_employees.html', {'employees': employees})
+
+@login_required
+@user_passes_test(is_staff)
+def reports(request):
+    # Get filter parameters
+    department = request.GET.get('department', '')
+    start_date = request.GET.get('start_date', '')
+    end_date = request.GET.get('end_date', '')
+    
+    # Base queryset
+    leave_requests = LeaveRequest.objects.all()
+    
+    # Apply date filters if provided
+    if start_date:
+        leave_requests = leave_requests.filter(start_date__gte=start_date)
+    if end_date:
+        leave_requests = leave_requests.filter(end_date__lte=end_date)
+    
+    # Calculate summary statistics
+    total_leaves = leave_requests.count()
+    pending_leaves = leave_requests.filter(status='PENDING').count()
+    approved_leaves = leave_requests.filter(status='APPROVED').count()
+    rejected_leaves = leave_requests.filter(status='REJECTED').count()
+    
+    # Department-wise statistics
+    if department:
+        # If specific department is selected
+        department_stats = leave_requests.filter(
+            employee__department=department
+        ).values('employee__department').annotate(
+            total=Count('id'),
+            approved=Count('id', filter=Q(status='APPROVED')),
+            pending=Count('id', filter=Q(status='PENDING')),
+            rejected=Count('id', filter=Q(status='REJECTED')),
+            avg_duration=Avg('number_of_days')
+        )
+    else:
+        # Show all departments
+        department_stats = leave_requests.values('employee__department').annotate(
+            total=Count('id'),
+            approved=Count('id', filter=Q(status='APPROVED')),
+            pending=Count('id', filter=Q(status='PENDING')),
+            rejected=Count('id', filter=Q(status='REJECTED')),
+            avg_duration=Avg('number_of_days')
+        )
+    
+    # Convert department codes to names and format the stats
+    departments_dict = dict(Employee.DEPARTMENT_CHOICES)
+    formatted_dept_stats = []
+    for stat in department_stats:
+        dept_code = stat['employee__department']
+        formatted_dept_stats.append({
+            'name': departments_dict.get(dept_code, dept_code),
+            'total': stat['total'],
+            'approved': stat['approved'],
+            'pending': stat['pending'],
+            'rejected': stat['rejected'],
+            'avg_duration': round(stat['avg_duration'], 1) if stat['avg_duration'] else 0
+        })
+    
+    # Leave type distribution with month analysis
+    leave_type_stats = []
+    for leave_type in ['CASUAL', 'EXTRA', 'SUMMER']:
+        type_requests = leave_requests.filter(leave_type=leave_type)
+        if type_requests.exists():
+            # Get the most common month for this leave type
+            common_month = type_requests.annotate(
+                month=ExtractMonth('start_date')
+            ).values('month').annotate(
+                count=Count('id')
+            ).order_by('-count').first()
+            
+            month_name = datetime(2000, common_month['month'], 1).strftime('%B') if common_month else 'N/A'
+            
+            leave_type_stats.append({
+                'name': leave_type.capitalize(),
+                'total': type_requests.count(),
+                'approved': type_requests.filter(status='APPROVED').count(),
+                'avg_duration': round(type_requests.aggregate(avg=Avg('number_of_days'))['avg'] or 0, 1),
+                'common_month': month_name
+            })
+    
+    context = {
+        'total_leaves': total_leaves,
+        'pending_leaves': pending_leaves,
+        'approved_leaves': approved_leaves,
+        'rejected_leaves': rejected_leaves,
+        'department_stats': formatted_dept_stats,
+        'leave_type_stats': leave_type_stats,
+        'selected_department': department,
+        'start_date': start_date,
+        'end_date': end_date,
+        'departments': dict(Employee.DEPARTMENT_CHOICES),
+    }
+    
+    return render(request, 'leave_management/reports.html', context)
+
+def logout_view(request):
+    if request.user.is_authenticated:
+        # Clear any messages
+        storage = messages.get_messages(request)
+        for _ in storage:
+            pass  # Iterate through messages to mark them as read
+        
+        # Perform logout
+        logout(request)
+        messages.success(request, 'You have been successfully logged out.')
+    
+    # Redirect to login page
+    return redirect('login')
+
+@login_required
+@require_POST
+def cancel_leave(request, leave_id):
+    leave_request = get_object_or_404(LeaveRequest, id=leave_id, employee=request.user)
+    
+    if leave_request.status != 'PENDING' or leave_request.start_date <= timezone.now().date():
+        messages.error(request, 'This leave request cannot be cancelled.')
+        return redirect('leave_history')
+    
+    leave_request.status = 'CANCELLED'
+    leave_request.cancelled_at = timezone.now()
+    leave_request.cancellation_reason = 'Cancelled by employee'
+    leave_request.save()
+    
+    messages.success(request, 'Leave request has been cancelled successfully.')
+    return redirect('leave_history')

@@ -113,42 +113,167 @@
 
 <div class="container mt-4">
     <div class="card">
-        <div class="card-header d-flex justify-content-between align-items-center">
-            <h4 class="mb-0">Employee List</h4>
-            <div class="btn-group">
-                <button type="button" class="btn btn-primary dropdown-toggle" data-bs-toggle="dropdown">
-                    Export
-                </button>
-                <ul class="dropdown-menu">
-                    <li><a class="dropdown-item" href="?export=excel">Export to Excel</a></li>
-                    <li><a class="dropdown-item" href="?export=pdf">Export to PDF</a></li>
-                </ul>
+        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">Employee List</h5>
+            <div>
+                <a href="{% url 'my_compensatory_leaves' %}" class="btn btn-light">
+                    <i class="fas fa-calendar-check"></i> My Compensatory Leaves
+                </a>
+                {% if request.user.is_admin %}
+                <a href="{% url 'register_employee' %}" class="btn btn-light">
+                    <i class="fas fa-user-plus"></i> Add Employee
+                </a>
+                {% endif %}
             </div>
         </div>
         <div class="card-body">
-            <table class="table table-striped">
-                <thead>
-                    <tr>
-                        <th>Employee ID</th>
-                        <th>First Name</th>
-                        <th>Last Name</th>
-                        <th>Department</th>
-                        <th>phone_number</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for employee in employees %}
-                    <tr>
-                        <td>{{ employee.employee_id }}</td>
-                        <td>{{ employee.first_name }}</td>
-                        <td>{{ employee.last_name }}</td>
-                        <td>{{ employee.get_department_display }}</td>
-                        <td>{{ employee.phone_number }}</td>
-                    </tr>
+            <!-- Search Form -->
+            <div class="mb-4">
+                <form method="get" class="row g-3 align-items-center">
+                    <div class="col-md-6">
+                        <div class="input-group">
+                            <input type="text" name="search" class="form-control" placeholder="Search by ID, name or phone..." value="{{ search_query }}">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-search"></i> Search
+                            </button>
+                        </div>
+                    </div>
+                    {% if search_query %}
+                    <div class="col-auto">
+                        <a href="{% url 'employee_list' %}" class="btn btn-outline-secondary">
+                            <i class="fas fa-times"></i> Clear
+                        </a>
+                    </div>
+                    {% endif %}
+                </form>
+            </div>
+
+            <!-- Sorting Controls -->
+            <div class="mb-3">
+                <div class="btn-group">
+                    <a href="?sort_by=employee_id&order={% if sort_by == 'employee_id' and sort_order == 'asc' %}desc{% else %}asc{% endif %}" 
+                       class="btn btn-outline-primary {% if sort_by == 'employee_id' %}active{% endif %}">
+                        Sort by ID 
+                        {% if sort_by == 'employee_id' %}
+                            <i class="fas fa-sort-{% if sort_order == 'asc' %}up{% else %}down{% endif %}"></i>
+                        {% endif %}
+                    </a>
+                    <a href="?sort_by=department&order={% if sort_by == 'department' and sort_order == 'asc' %}desc{% else %}asc{% endif %}" 
+                       class="btn btn-outline-primary {% if sort_by == 'department' %}active{% endif %}">
+                        Sort by Department
+                        {% if sort_by == 'department' %}
+                            <i class="fas fa-sort-{% if sort_order == 'asc' %}up{% else %}down{% endif %}"></i>
+                        {% endif %}
+                    </a>
+                </div>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Employee ID</th>
+                            <th>Name</th>
+                            <th>Department</th>
+                            <th>Phone</th>
+                            <th>Date of Joining</th>
+                            <th>Experience</th>
+                            <th>Current Salary</th>
+                            {% if request.user.is_admin %}
+                            <th>Actions</th>
+                            {% endif %}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for emp in employees %}
+                        <tr>
+                            <td>{{ emp.employee.employee_id }}</td>
+                            <td>{{ emp.employee.get_full_name }}</td>
+                            <td>{{ emp.employee.get_department_display }}</td>
+                            <td>{{ emp.employee.phone_number|default:"-" }}</td>
+                            <td>{{ emp.employee.date_of_joining|date:"d M Y"|default:"-" }}</td>
+                            <td>{{ emp.experience }}</td>
+                            <td>₹{{ emp.employee.current_salary|floatformat:2|default:"-" }}</td>
+                            {% if request.user.is_admin %}
+                            <td>
+                                <a href="{% url 'employee_detail' emp.employee.employee_id %}" class="btn btn-sm btn-info">
+                                    <i class="fas fa-info-circle"></i> Details
+                                </a>
+                            </td>
+                            {% endif %}
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="7" class="text-center">No employees found.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Pagination -->
+            {% if employees.has_other_pages %}
+            <nav aria-label="Page navigation" class="mt-4">
+                <ul class="pagination justify-content-center">
+                    {% if employees.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ employees.previous_page_number }}&sort_by={{ sort_by }}&order={{ sort_order }}">&laquo;</a>
+                        </li>
+                    {% else %}
+                        <li class="page-item disabled">
+                            <span class="page-link">&laquo;</span>
+                        </li>
+                    {% endif %}
+
+                    {% for i in employees.paginator.page_range %}
+                        {% if employees.number == i %}
+                            <li class="page-item active">
+                                <span class="page-link">{{ i }}</span>
+                            </li>
+                        {% else %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ i }}&sort_by={{ sort_by }}&order={{ sort_order }}">{{ i }}</a>
+                            </li>
+                        {% endif %}
                     {% endfor %}
-                </tbody>
-            </table>
+
+                    {% if employees.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ employees.next_page_number }}&sort_by={{ sort_by }}&order={{ sort_order }}">&raquo;</a>
+                        </li>
+                    {% else %}
+                        <li class="page-item disabled">
+                            <span class="page-link">&raquo;</span>
+                        </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+
+            <!-- Export Options -->
+            {% if request.user.is_admin %}
+            <div class="mt-3 text-center">
+                <a href="?export=excel" class="btn btn-success">
+                    <i class="fas fa-file-excel"></i> Export to Excel
+                </a>
+                <a href="?export=pdf" class="btn btn-danger">
+                    <i class="fas fa-file-pdf"></i> Export to PDF
+                </a>
+            </div>
+            {% endif %}
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize any Bootstrap tooltips
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl)
+        });
+    });
+</script>
 {% endblock %}

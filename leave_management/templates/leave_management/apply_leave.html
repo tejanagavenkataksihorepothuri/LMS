@@ -164,6 +164,34 @@
     .form-check-label {
         cursor: pointer;
     }
+
+    /* Add styles for blocked dates */
+    .date-blocked {
+        background-color: #fee2e2;
+        color: #dc2626;
+        cursor: not-allowed;
+    }
+
+    .date-info {
+        font-size: 0.875rem;
+        color: #6b7280;
+        margin-top: 0.25rem;
+    }
+
+    .blocked-date-legend {
+        display: flex;
+        align-items: center;
+        margin-bottom: 1rem;
+        gap: 1rem;
+    }
+
+    .blocked-date-indicator {
+        width: 1rem;
+        height: 1rem;
+        background-color: #fee2e2;
+        border: 1px solid #dc2626;
+        border-radius: 0.25rem;
+    }
 </style>
 
 <div class="page-loader">
@@ -203,13 +231,20 @@
                         </div>
                     </div>
 
+                    <div class="blocked-date-legend">
+                        <div class="blocked-date-indicator"></div>
+                        <span>Blocked Dates (Sundays and Holidays)</span>
+                    </div>
+
                     <div class="mb-3">
                         <label for="id_start_date" class="form-label">Start Date</label>
                         <input type="date" name="start_date" class="form-control" required id="id_start_date" min="{{ today|date:'Y-m-d' }}">
+                        <div class="date-info" id="start_date_info"></div>
                     </div>
                     <div class="mb-3">
                         <label for="id_end_date" class="form-label">End Date</label>
                         <input type="date" name="end_date" class="form-control" required id="id_end_date" min="{{ today|date:'Y-m-d' }}">
+                        <div class="date-info" id="end_date_info"></div>
                     </div>
                     <div class="mb-3">
                         <label for="id_reason" class="form-label">Reason</label>
@@ -240,6 +275,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const endDateInput = document.getElementById('id_end_date');
     const todayRadio = document.getElementById('today_radio');
     const tomorrowRadio = document.getElementById('tomorrow_radio');
+    const startDateInfo = document.getElementById('start_date_info');
+    const endDateInfo = document.getElementById('end_date_info');
 
     // Check if current time is after 8:30 AM
     const currentTime = new Date();
@@ -255,25 +292,55 @@ document.addEventListener('DOMContentLoaded', function() {
         return date.toISOString().split('T')[0];
     }
 
+    function isSunday(date) {
+        return date.getDay() === 0;
+    }
+
+    function isDateDisabled(date) {
+        const dateStr = formatDate(date);
+        return disabledDates.includes(dateStr) || date <= today || isSunday(date);
+    }
+
+    function updateDateInfo(date, infoElement) {
+        if (isSunday(date)) {
+            infoElement.textContent = 'This date is a Sunday (not allowed)';
+            infoElement.style.color = '#dc2626';
+        } else if (disabledDates.includes(formatDate(date))) {
+            infoElement.textContent = 'This date is a holiday';
+            infoElement.style.color = '#dc2626';
+        } else {
+            infoElement.textContent = '';
+        }
+    }
+
     // Handle radio button changes
     todayRadio.addEventListener('change', function() {
         if (this.checked) {
+            if (isDateDisabled(today)) {
+                this.checked = false;
+                alert('Cannot select today as it is either a Sunday or a holiday');
+                return;
+            }
             startDateInput.value = formatDate(today);
             endDateInput.value = formatDate(today);
+            updateDateInfo(today, startDateInfo);
+            updateDateInfo(today, endDateInfo);
         }
     });
 
     tomorrowRadio.addEventListener('change', function() {
         if (this.checked) {
+            if (isDateDisabled(tomorrow)) {
+                this.checked = false;
+                alert('Cannot select tomorrow as it is either a Sunday or a holiday');
+                return;
+            }
             startDateInput.value = formatDate(tomorrow);
             endDateInput.value = formatDate(tomorrow);
+            updateDateInfo(tomorrow, startDateInfo);
+            updateDateInfo(tomorrow, endDateInfo);
         }
     });
-
-    function isDateDisabled(date) {
-        const dateStr = date.toISOString().split('T')[0];
-        return disabledDates.includes(dateStr) || date <= today;
-    }
     
     startDateInput.addEventListener('change', function() {
         const startDate = new Date(this.value);
@@ -285,8 +352,14 @@ document.addEventListener('DOMContentLoaded', function() {
         
         if (isDateDisabled(startDate)) {
             this.value = '';
-            alert('This date is not available for leave application');
+            if (isSunday(startDate)) {
+                alert('Cannot apply leave for Sunday');
+            } else {
+                alert('This date is not available for leave application');
+            }
         }
+        
+        updateDateInfo(startDate, startDateInfo);
     });
     
     endDateInput.addEventListener('change', function() {
@@ -295,12 +368,31 @@ document.addEventListener('DOMContentLoaded', function() {
         
         if (endDate < startDate) {
             this.value = startDateInput.value;
+            endDate = startDate;
         }
         
         if (isDateDisabled(endDate)) {
             this.value = '';
-            alert('This date is not available for leave application');
+            if (isSunday(endDate)) {
+                alert('Cannot apply leave for Sunday');
+            } else {
+                alert('This date is not available for leave application');
+            }
         }
+        
+        updateDateInfo(endDate, endDateInfo);
+    });
+
+    // Add input event listeners to style the date inputs
+    [startDateInput, endDateInput].forEach(input => {
+        input.addEventListener('input', function() {
+            const date = new Date(this.value);
+            if (isDateDisabled(date)) {
+                this.classList.add('date-blocked');
+            } else {
+                this.classList.remove('date-blocked');
+            }
+        });
     });
 });
 </script>

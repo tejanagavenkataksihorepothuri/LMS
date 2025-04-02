@@ -1,0 +1,223 @@
+{% extends 'leave_management/base.html' %}
+
+{% block styles %}
+<style>
+    .report-card {
+        transition: transform 0.3s ease;
+    }
+    
+    .report-card:hover {
+        transform: translateY(-5px);
+    }
+    
+    .report-icon {
+        font-size: 2rem;
+        margin-bottom: 1rem;
+        color: var(--primary-color);
+    }
+    
+    .chart-container {
+        height: 300px;
+        margin-bottom: 2rem;
+    }
+    
+    .filter-section {
+        background: rgba(255, 255, 255, 0.1);
+        padding: 1.5rem;
+        border-radius: 10px;
+        margin-bottom: 2rem;
+    }
+
+    .date-range-group {
+        border: 1px solid #ddd;
+        padding: 15px;
+        border-radius: 5px;
+        background-color: rgba(255, 255, 255, 0.05);
+    }
+
+    .date-range-group label {
+        font-weight: 500;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row mb-4">
+        <div class="col">
+            <h2 class="mb-4" style="color: black;">Leave Management Reports</h2>
+            
+            <!-- Filters -->
+            <div class="card filter-section mb-4">
+                <div class="card-body">
+                    <form method="get" class="row g-3">
+                        <div class="col-md-4">
+                            <label for="department" class="form-label">Department</label>
+                            <select class="form-select" id="department" name="department">
+                                <option value="">All Departments</option>
+                                {% for code, name in departments.items %}
+                                <option value="{{ code }}" {% if selected_department == code %}selected{% endif %}>{{ name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-8">
+                            <div class="date-range-group">
+                                <div class="row">
+                                    <div class="col-md-5">
+                                        <label for="start_date" class="form-label">Start Date</label>
+                                        <input type="date" class="form-control" id="start_date" name="start_date" value="{{ start_date }}">
+                                    </div>
+                                    <div class="col-md-5">
+                                        <label for="end_date" class="form-label">End Date</label>
+                                        <input type="date" class="form-control" id="end_date" name="end_date" value="{{ end_date }}">
+                                    </div>
+                                    <div class="col-md-2 d-flex align-items-end">
+                                        <button type="submit" class="btn btn-primary w-100">
+                                            <i class="fas fa-filter"></i> Filter
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Summary Cards -->
+            <div class="row mb-4">
+                <div class="col-md-3">
+                    <div class="card report-card">
+                        <div class="card-body text-center">
+                            <div class="report-icon">
+                                <i class="fas fa-calendar-check"></i>
+                            </div>
+                            <h5 class="card-title">Total Leaves</h5>
+                            <h3 class="mb-0">{{ total_leaves }}</h3>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card report-card">
+                        <div class="card-body text-center">
+                            <div class="report-icon">
+                                <i class="fas fa-clock"></i>
+                            </div>
+                            <h5 class="card-title">Pending Approvals</h5>
+                            <h3 class="mb-0">{{ pending_leaves }}</h3>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card report-card">
+                        <div class="card-body text-center">
+                            <div class="report-icon">
+                                <i class="fas fa-check-circle"></i>
+                            </div>
+                            <h5 class="card-title">Approved Leaves</h5>
+                            <h3 class="mb-0">{{ approved_leaves }}</h3>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card report-card">
+                        <div class="card-body text-center">
+                            <div class="report-icon">
+                                <i class="fas fa-times-circle"></i>
+                            </div>
+                            <h5 class="card-title">Rejected Leaves</h5>
+                            <h3 class="mb-0">{{ rejected_leaves }}</h3>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Detailed Reports -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Leave Distribution by Department</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Department</th>
+                                    <th>Total Leaves</th>
+                                    <th>Approved</th>
+                                    <th>Pending</th>
+                                    <th>Rejected</th>
+                                    <th>Avg. Duration</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for dept in department_stats %}
+                                <tr>
+                                    <td>{{ dept.name }}</td>
+                                    <td>{{ dept.total }}</td>
+                                    <td>{{ dept.approved }}</td>
+                                    <td>{{ dept.pending }}</td>
+                                    <td>{{ dept.rejected }}</td>
+                                    <td>{{ dept.avg_duration }} days</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Leave Type Distribution -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Leave Type Distribution</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Leave Type</th>
+                                    <th>Total Requests</th>
+                                    <th>Approved</th>
+                                    <th>Average Duration</th>
+                                    <th>Most Common Month</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for type in leave_type_stats %}
+                                <tr>
+                                    <td>{{ type.name }}</td>
+                                    <td>{{ type.total }}</td>
+                                    <td>{{ type.approved }}</td>
+                                    <td>{{ type.avg_duration }} days</td>
+                                    <td>{{ type.common_month }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Add date range validation
+    const startDate = document.getElementById('start_date');
+    const endDate = document.getElementById('end_date');
+
+    startDate.addEventListener('change', function() {
+        endDate.min = this.value;
+    });
+
+    endDate.addEventListener('change', function() {
+        startDate.max = this.value;
+    });
+});
+</script>
+{% endblock %} 

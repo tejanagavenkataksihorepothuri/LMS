@@ -1,34 +1,100 @@
 {% extends 'leave_management/base.html' %}
 
 {% block content %}
-<div class="row justify-content-center">
-    <div class="col-md-6">
-        <div class="card shadow">
-            <div class="card-header">
-                <h4 class="mb-0">Delete Employee</h4>
-            </div>
-            <div class="card-body">
-                <form method="post">
-                    {% csrf_token %}
-                    <div class="mb-3">
-                        <label for="employee_id" class="form-label">Employee ID</label>
-                        <input type="text" name="employee_id" id="employee_id" class="form-control" required style="text-transform: uppercase;">
-                    </div>
-                    <div class="mb-3">
-                        <label for="password" class="form-label">Admin Password</label>
-                        <input type="password" name="password" id="password" class="form-control" required>
-                        <div class="form-text text-muted">
-                            Please enter your admin password to confirm deletion.
+<div class="container mt-4">
+    {% if messages %}
+    <div class="messages mb-4">
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="row">
+        <!-- Individual Employee Delete -->
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-header bg-danger text-white">
+                    <h5 class="mb-0"><i class="fas fa-user-minus me-2"></i>Delete Individual Employee</h5>
+                </div>
+                <div class="card-body">
+                    <form method="post" action="{% url 'delete_employee' %}" onsubmit="return handleDeleteConfirmation(event);">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label for="employee_id" class="form-label">Employee ID</label>
+                            <input type="text" class="form-control" id="employee_id" name="employee_id" required>
                         </div>
-                    </div>
-                    <div class="d-grid">
-                        <button type="submit" class="btn btn-danger" onclick="return confirm('Are you sure you want to delete this employee? This action cannot be undone.')">
-                            Delete Employee
+                        <div class="mb-3">
+                            <label for="password" class="form-label">Admin Password</label>
+                            <input type="password" class="form-control" id="password" name="password" required>
+                        </div>
+                        <button type="submit" class="btn btn-danger">
+                            <i class="fas fa-trash me-2"></i>Delete Employee
                         </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bulk Delete -->
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-header bg-danger text-white">
+                    <h5 class="mb-0"><i class="fas fa-users-slash me-2"></i>Bulk Delete Employees</h5>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        Warning: This will delete all non-admin employees from the system. This action cannot be undone.
                     </div>
-                </form>
+                    <form method="post" action="{% url 'bulk_delete_employees' %}" onsubmit="return handleBulkDeleteConfirmation(event);">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label for="bulk_password" class="form-label">Admin Password</label>
+                            <input type="password" class="form-control" id="bulk_password" name="password" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="confirmation" class="form-label">Type "DELETE ALL" to confirm</label>
+                            <input type="text" class="form-control" id="confirmation" name="confirmation" required 
+                                   pattern="DELETE ALL" title="Please type 'DELETE ALL' to confirm">
+                        </div>
+                        <button type="submit" class="btn btn-danger">
+                            <i class="fas fa-trash-alt me-2"></i>Delete All Employees
+                        </button>
+                    </form>
+                </div>
             </div>
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Add any additional JavaScript functionality here
+    });
+</script>
+<script>
+function handleDeleteConfirmation(event) {
+    event.preventDefault();
+    const confirmed = confirm('Are you sure you want to delete this employee? This action cannot be undone.');
+    if (confirmed) {
+        event.target.submit();
+    }
+    return false;
+}
+
+function handleBulkDeleteConfirmation(event) {
+    event.preventDefault();
+    const confirmed = confirm('WARNING: This will delete ALL non-admin employees. Are you absolutely sure you want to proceed? This action cannot be undone.');
+    if (confirmed) {
+        event.target.submit();
+    }
+    return false;
+}
+</script>
 {% endblock %}

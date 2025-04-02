@@ -25,6 +25,7 @@ class EmployeeManager(UserManager):
         extra_fields.setdefault('is_superuser', True)
         extra_fields.setdefault('is_admin', True)
         extra_fields.setdefault('department', 'CSE')  # Default department
+        extra_fields.setdefault('date_of_joining', timezone.now().date())  # Set default date_of_joining
         
         if extra_fields.get('is_staff') is not True:
             raise ValueError('Superuser must have is_staff=True.')
@@ -36,6 +37,10 @@ class EmployeeManager(UserManager):
     def _create_user(self, employee_id, password, **extra_fields):
         if not employee_id:
             raise ValueError('The Employee ID must be set')
+        
+        # Ensure date_of_joining is set
+        if 'date_of_joining' not in extra_fields:
+            extra_fields['date_of_joining'] = timezone.now().date()
         
         user = self.model(
             username=employee_id.upper(),
@@ -49,7 +54,8 @@ class EmployeeManager(UserManager):
 class Employee(AbstractUser):
     DEPARTMENT_CHOICES = [
         ('CSE', 'Computer Science'),
-        ('ECE', 'Electronics'),
+        ('ECE', 'Electronics and Communication'),
+        ('EEE', 'Electrical and Electronics'),
         ('MECH', 'Mechanical'),
         ('CIVIL', 'Civil'),
         ('AI', 'Artificial Intelligence'),
@@ -62,11 +68,14 @@ class Employee(AbstractUser):
     employee_id = models.CharField(max_length=20, unique=True)
     department = models.CharField(max_length=20, choices=DEPARTMENT_CHOICES, default='CSE')
     is_admin = models.BooleanField(default=False)
+    date_of_joining = models.DateField(default=timezone.now)
+    experience = models.IntegerField(default=0, editable=False)  # Changed to IntegerField to store days
     casual_leaves_remaining = models.IntegerField(default=1)
     extra_leaves_taken = models.IntegerField(default=0)
     summer_leaves_remaining = models.IntegerField(default=5)
     last_leave_increment = models.DateField(default=timezone.now)
     phone_number = models.CharField(max_length=15, blank=True, null=True)
+    current_salary = models.FloatField(default=0.0, blank=True, null=True)
 
     objects = EmployeeManager()
 
@@ -98,8 +107,23 @@ class Employee(AbstractUser):
             self.username = self.employee_id.upper()
             # Keep employee_id in original case
             self.employee_id = self.employee_id.strip()
-            # Run validation before saving
+        
+        # Calculate experience from date_of_joining
+        if self.date_of_joining:
+            today = timezone.now().date()
+            delta = today - self.date_of_joining
+            self.experience = delta.days  # Store experience as number of days
+        else:
+            # Set default date_of_joining if not set
+            self.date_of_joining = timezone.now().date()
+            self.experience = 0
+        
+        # Run validation before saving
+        if not kwargs.get('skip_validation', False):
             self.full_clean()
+        
+        # Remove skip_validation from kwargs if present
+        kwargs.pop('skip_validation', None)
         super().save(*args, **kwargs)
 
     def get_username(self):
@@ -143,19 +167,47 @@ class Employee(AbstractUser):
         
         self.save()
 
+    def calculate_experience(self):
+        if self.date_of_joining:
+            today = timezone.now().date()
+            self.experience = today - self.date_of_joining
+            return self.experience
+        return None
+
+    def get_experience_years(self):
+        """Return experience in years and months format"""
+        if self.experience:
+            years = self.experience // 365
+            remaining_days = self.experience % 365
+            months = remaining_days // 30
+            return f"{years} years, {months} months"
+        return "0 years, 0 months"
+
 class Holiday(models.Model):
     name = models.CharField(max_length=100)
-    date = models.DateField()
+    date = models.DateField(unique=True)  # Changed to unique field
     description = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        ordering = ['-date']
-        unique_together = ['date', 'name']
+        ordering = ['date']  # Changed to ascending order
+        verbose_name = 'Holiday'
+        verbose_name_plural = 'Holidays'
+
+    def clean(self):
+        if self.date:
+            # Check if holiday already exists on this date
+            if Holiday.objects.filter(date=self.date).exclude(pk=self.pk).exists():
+                raise ValidationError({'date': 'A holiday already exists on this date'})
+        super().clean()
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)
 
     def __str__(self):
-        return f"{self.name} - {self.date}"
+        return f"{self.name} - {self.date.strftime('%d %b, %Y')}"
 
     @staticmethod
     def is_holiday(date):
@@ -171,7 +223,11 @@ class LeaveRequest(models.Model):
         ('PENDING', 'Pending'),
         ('APPROVED', 'Approved'),
         ('REJECTED', 'Rejected'),
+        ('CANCELLED', 'Cancelled'),
     ]
+    
+    cancellation_reason = models.TextField(null=True, blank=True)
+    cancelled_at = models.DateTimeField(null=True, blank=True)
     
     LEAVE_TYPES = [
         ('CASUAL', 'Casual Leave'),
@@ -187,6 +243,7 @@ class LeaveRequest(models.Model):
     leave_type = models.CharField(max_length=10, choices=LEAVE_TYPES, default='CASUAL')
     number_of_days = models.IntegerField(default=1)
     created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
     
     def __str__(self):
         return f"{self.employee.employee_id} - {self.start_date} to {self.end_date}"
@@ -256,3 +313,35 @@ class LoginAttempt(models.Model):
 
     def __str__(self):
         return f"{self.username} - {self.attempted_at}"
+
+class CompensatoryLeave(models.Model):
+    GRANT_TYPE_CHOICES = [
+        ('INDIVIDUAL', 'Individual Employee'),
+        ('DEPARTMENT', 'Entire Department'),
+    ]
+    
+    grant_type = models.CharField(max_length=20, choices=GRANT_TYPE_CHOICES)
+    department = models.CharField(max_length=20, choices=DEPARTMENT_CHOICES, null=True, blank=True)
+    employee = models.ForeignKey(Employee, on_delete=models.CASCADE, null=True, blank=True)
+    number_of_days = models.PositiveIntegerField()
+    reason = models.TextField()
+    granted_date = models.DateField(auto_now_add=True)
+    granted_by = models.ForeignKey(Employee, on_delete=models.SET_NULL, null=True, related_name='granted_compensatory_leaves')
+    
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        
+        # Update casual leaves for affected employees
+        if self.grant_type == 'INDIVIDUAL' and self.employee:
+            self.employee.casual_leaves_remaining += self.number_of_days
+            self.employee.save()
+        elif self.grant_type == 'DEPARTMENT' and self.department:
+            employees = Employee.objects.filter(department=self.department)
+            for emp in employees:
+                emp.casual_leaves_remaining += self.number_of_days
+                emp.save()
+    
+    def __str__(self):
+        if self.grant_type == 'INDIVIDUAL':
+            return f"Compensatory Leave for {self.employee.employee_id} - {self.number_of_days} days"
+        return f"Compensatory Leave for {self.get_department_display()} - {self.number_of_days} days"
